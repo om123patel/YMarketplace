@@ -1,0 +1,114 @@
+@using AdminPanel.ViewModels.Brands
+@model CreateBrandViewModel
+@{
+    ViewData["Title"] = "New Brand";
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Brands</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>New Brand</span>
+        </div>
+        <h1 class="pg-title">New Brand</h1>
+        <p class="pg-sub">Add a new brand to the product catalogue</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">Cancel</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-main">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Brand Info</div>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Name <span>*</span></label>
+                        <input asp-for="Name" class="form-input" id="brandName" placeholder="e.g. Sony" autocomplete="off" />
+                        <span asp-validation-for="Name" class="field-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug <span>*</span></label>
+                        <div class="form-input-wrap">
+                            <span class="form-icon form-icon--text">/</span>
+                            <input asp-for="Slug" class="form-input form-input--icon" id="brandSlug" placeholder="sony" />
+                        </div>
+                        <span class="form-hint">Auto-generated · URL-safe lowercase</span>
+                        <span asp-validation-for="Slug" class="field-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-textarea" rows="2" placeholder="Short brand description…"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Online Presence</div>
+                    <span class="card-sub">Optional</span>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Logo URL</label>
+                            <input asp-for="LogoUrl" class="form-input" type="url" placeholder="https://…" />
+                            <span class="form-hint">Square image, min 64×64 px</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Website URL</label>
+                            <input asp-for="WebsiteUrl" class="form-input" type="url" placeholder="https://sony.com" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-action="Index" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Create Brand
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="detail-side">
+        <div class="card">
+            <div class="card-head"><div class="card-title">Tips</div></div>
+            <div class="card-body">
+                <ul class="tips-list">
+                    <li class="tips-item">Use the official brand name as it appears on packaging.</li>
+                    <li class="tips-item">A logo URL helps customers identify brands quickly in listings.</li>
+                    <li class="tips-item">Brands with products cannot be deleted — deactivate instead.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const n = document.getElementById('brandName'), s = document.getElementById('brandSlug');
+            let edited = false;
+            s.addEventListener('input', () => edited = true);
+            n.addEventListener('input', () => {
+                if (edited) return;
+                s.value = n.value.toLowerCase().trim()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/[\s_]+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            });
+        })();
+    </script>
+}

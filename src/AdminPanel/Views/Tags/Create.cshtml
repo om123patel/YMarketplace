@@ -1,0 +1,90 @@
+﻿@using AdminPanel.ViewModels.Tags
+@model CreateTagViewModel
+@{
+    ViewData["Title"] = "New Tag";
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Tags</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>New Tag</span>
+        </div>
+        <h1 class="pg-title">New Tag</h1>
+        <p class="pg-sub">Tags help customers filter and discover products</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">Cancel</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-main">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Tag Details</div>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Name <span>*</span></label>
+                        <input asp-for="Name" class="form-input" id="tagName" placeholder="e.g. Summer Sale" autocomplete="off" />
+                        <span asp-validation-for="Name" class="field-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug <span>*</span></label>
+                        <div class="form-input-wrap">
+                            <span class="form-icon form-icon--text">#</span>
+                            <input asp-for="Slug" class="form-input form-input--icon" id="tagSlug" placeholder="summer-sale" />
+                        </div>
+                        <span class="form-hint">Used in URLs and filters — auto-generated from name</span>
+                        <span asp-validation-for="Slug" class="field-error"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-action="Index" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Create Tag
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="detail-side">
+        <div class="card">
+            <div class="card-head"><div class="card-title">About Tags</div></div>
+            <div class="card-body">
+                <ul class="tips-list">
+                    <li class="tips-item">Tags group products across categories for filtering and discovery.</li>
+                    <li class="tips-item">Keep tag names short and consistent.</li>
+                    <li class="tips-item">Tags with products cannot be deleted.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const n = document.getElementById('tagName'), s = document.getElementById('tagSlug');
+            let edited = false;
+            s.addEventListener('input', () => edited = true);
+            n.addEventListener('input', () => {
+                if (edited) return;
+                s.value = n.value.toLowerCase().trim()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/[\s_]+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            });
+        })();
+    </script>
+}

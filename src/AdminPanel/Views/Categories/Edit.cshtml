@@ -1,0 +1,198 @@
+﻿@using AdminPanel.ViewModels.Categories
+@model EditCategoryViewModel
+@{
+    ViewData["Title"] = $"Edit — {Model.OriginalName}";
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Categories</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>@Model.OriginalName</span>
+        </div>
+        <h1 class="pg-title">Edit Category</h1>
+        <p class="pg-sub">Update name, slug, media and visibility</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">Cancel</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-main">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Basic Info</div>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Name <span>*</span></label>
+                        <input asp-for="Name" class="form-input" id="catName" autocomplete="off" />
+                        <span asp-validation-for="Name" class="field-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug <span>*</span></label>
+                        <div class="form-input-wrap">
+                            <span class="form-icon form-icon--text">/</span>
+                            <input asp-for="Slug" class="form-input form-input--icon" id="catSlug" />
+                        </div>
+                        <span asp-validation-for="Slug" class="field-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-textarea" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Organisation & Status</div>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Parent Category</label>
+                            <select asp-for="ParentId" class="form-select">
+                                <option value="">— Root (no parent) —</option>
+                                @foreach (var p in Model.ParentOptions)
+                                {
+                                    <option value="@p.Id" selected="@(Model.ParentId == p.Id)">@p.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sort Order</label>
+                            <input asp-for="SortOrder" type="number" min="0" class="form-input" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <label class="check-row">
+                            <input asp-for="IsActive" type="checkbox" class="cb" />
+                            <span class="check-row-label">
+                                Active
+                                <span class="check-row-hint">Visible to customers on the storefront</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Media</div>
+                    <span class="card-sub">Optional</span>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Image URL</label>
+                            <input asp-for="ImageUrl" class="form-input" type="url" />
+                            <span class="form-hint">Banner for the category page</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Icon URL</label>
+                            <input asp-for="IconUrl" class="form-input" type="url" />
+                            <span class="form-hint">Small icon shown in navigation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-action="Index" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="detail-side">
+        <div class="card">
+            <div class="card-head"><div class="card-title">Details</div></div>
+            <div class="card-body">
+                <div class="detail-kv">
+                    <span class="detail-k">ID</span>
+                    <span class="detail-v tbl-mono">#@Model.Id</span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Products</span>
+                    <span class="detail-v">
+                        @if (Model.ProductCount > 0)
+                        {
+                            <a asp-controller="Products" asp-action="Index" asp-route-categoryId="@Model.Id" class="tbl-link">@Model.ProductCount</a>
+                        }
+                        else
+                        {
+
+                            <span>0</span>
+                        }
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.ProductCount == 0)
+        {
+            <div class="card card--danger">
+                <div class="card-head card-head--danger">
+                    <div class="card-title card-title--danger">Danger Zone</div>
+                </div>
+                <div class="card-body">
+                    <p class="danger-desc">No products assigned. This category can be deleted.</p>
+                    <button type="button" class="btn btn-danger btn-sm"
+                            onclick="document.getElementById('delModal').style.display='flex'">
+                        Delete Category
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.ProductCount == 0)
+{
+    <div class="modal-backdrop" id="delModal" style="display:none"
+         onclick="if(event.target===this)this.style.display='none'">
+        <div class="modal-card">
+            <div class="modal-title">Delete "@Model.OriginalName"?</div>
+            <p class="modal-desc">This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline"
+                        onclick="document.getElementById('delModal').style.display='none'">
+                    Cancel
+                </button>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const n = document.getElementById('catName'), s = document.getElementById('catSlug');
+            let edited = false;
+            s.addEventListener('input', () => edited = true);
+            n.addEventListener('input', () => {
+                if (edited) return;
+                s.value = n.value.toLowerCase().trim()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/[\s_]+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            });
+        })();
+    </script>
+}

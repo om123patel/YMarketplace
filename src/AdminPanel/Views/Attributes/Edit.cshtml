@@ -1,0 +1,183 @@
+@using AdminPanel.ViewModels.Attributes
+@model EditAttributeTemplateViewModel
+@{
+    ViewData["Title"] = $"Edit — {Model.OriginalName}";
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Attributes</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>@Model.OriginalName</span>
+        </div>
+        <h1 class="pg-title">Edit Template</h1>
+        <p class="pg-sub">Modify attribute fields and their input types</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">Cancel</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-main">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Template Info</div>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Template Name <span>*</span></label>
+                            <input asp-for="Name" class="form-input" />
+                            <span asp-validation-for="Name" class="field-error"></span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Category <span>*</span></label>
+                            <select asp-for="CategoryId" class="form-select">
+                                <option value="">— Select a category —</option>
+                                @foreach (var c in Model.Categories)
+                                {
+                                    <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">@c.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="CategoryId" class="field-error"></span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <label class="check-row">
+                            <input asp-for="IsActive" type="checkbox" class="cb" />
+                            <span class="check-row-label">
+                                Active
+                                <span class="check-row-hint">Applied to products in this category</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Attribute Rows</div>
+                    <span class="card-sub">All rows replaced on save</span>
+                    <div class="card-actions">
+                        <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            Add Attribute
+                        </button>
+                    </div>
+                </div>
+                <div id="attrRows">
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        <partial name="_AttributeRow" model="@(new AttributeRowViewModel { Row = Model.Items[i], Index = i })" />
+                    }
+                </div>
+                <div id="attrEmpty" class="attr-empty @(Model.Items.Any() ? "attr-empty--hidden" : "")">
+                    <span class="attr-empty-text">No attributes — click "Add Attribute" to add one.</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-action="Index" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Save Template
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="detail-side">
+        <div class="card">
+            <div class="card-head"><div class="card-title">Details</div></div>
+            <div class="card-body">
+                <div class="detail-kv">
+                    <span class="detail-k">ID</span>
+                    <span class="detail-v tbl-mono">#@Model.Id</span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Category</span>
+                    <span class="detail-v">@Model.CategoryName</span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Created</span>
+                    <span class="detail-v tbl-date">@Model.CreatedAt.ToString("dd MMM yyyy")</span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Updated</span>
+                    <span class="detail-v tbl-date">@Model.UpdatedAt.ToString("dd MMM yyyy")</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card--danger">
+            <div class="card-head card-head--danger">
+                <div class="card-title card-title--danger">Danger Zone</div>
+            </div>
+            <div class="card-body">
+                <p class="danger-desc">Deletes this template and all its attribute definitions.</p>
+                <button type="button" class="btn btn-danger btn-sm"
+                        onclick="document.getElementById('delModal').style.display='flex'">
+                    Delete Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="delModal" style="display:none"
+     onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-card">
+        <div class="modal-title">Delete "@Model.OriginalName"?</div>
+        <p class="modal-desc">All attribute definitions will be removed. This cannot be undone.</p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-outline"
+                    onclick="document.getElementById('delModal').style.display='none'">
+                Cancel
+            </button>
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let rowIdx = @Model.Items.Count;
+
+        document.getElementById('addRowBtn').addEventListener('click', () => {
+            fetch(`/Attributes/RowTemplate?index=${rowIdx}`)
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById('attrRows').insertAdjacentHTML('beforeend', html);
+                    document.getElementById('attrEmpty').classList.add('attr-empty--hidden');
+                    rowIdx++;
+                });
+        });
+
+        document.getElementById('attrRows').addEventListener('click', e => {
+            if (e.target.closest('.attr-row-remove')) {
+                e.target.closest('.attr-row').remove();
+                if (!document.querySelectorAll('.attr-row').length)
+                    document.getElementById('attrEmpty').classList.remove('attr-empty--hidden');
+            }
+        });
+
+        function toggleOptions(sel) {
+            const inp = sel.closest('.attr-row').querySelector('.attr-options-input');
+            const needs = sel.value === 'Select' || sel.value === 'MultiSelect';
+            inp.classList.toggle('attr-options-disabled', !needs);
+        }
+    </script>
+}

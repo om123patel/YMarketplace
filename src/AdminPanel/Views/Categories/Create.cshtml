@@ -1,0 +1,142 @@
+﻿@using AdminPanel.ViewModels.Categories
+@model CreateCategoryViewModel
+@{
+    ViewData["Title"] = "New Category";
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Categories</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>New Category</span>
+        </div>
+        <h1 class="pg-title">New Category</h1>
+        <p class="pg-sub">Define name, slug and hierarchy</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">Cancel</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-main">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Basic Info</div>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Name <span>*</span></label>
+                        <input asp-for="Name" class="form-input" id="catName" placeholder="e.g. Electronics" autocomplete="off" />
+                        <span asp-validation-for="Name" class="field-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Slug <span>*</span></label>
+                        <div class="form-input-wrap">
+                            <span class="form-icon form-icon--text">/</span>
+                            <input asp-for="Slug" class="form-input form-input--icon" id="catSlug" placeholder="electronics" />
+                        </div>
+                        <span class="form-hint">Auto-generated · URL-safe lowercase</span>
+                        <span asp-validation-for="Slug" class="field-error"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea asp-for="Description" class="form-textarea" rows="3" placeholder="Optional description shown on the category page…"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Organisation</div>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Parent Category</label>
+                            <select asp-for="ParentId" class="form-select">
+                                <option value="">— Root (no parent) —</option>
+                                @foreach (var p in Model.ParentOptions)
+                                {
+                                    <option value="@p.Id">@p.Name</option>
+                                }
+                            </select>
+                            <span class="form-hint">Leave blank for a top-level category</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sort Order</label>
+                            <input asp-for="SortOrder" type="number" min="0" class="form-input" placeholder="0" />
+                            <span class="form-hint">Lower numbers appear first</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Media</div>
+                    <span class="card-sub">Optional</span>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Image URL</label>
+                            <input asp-for="ImageUrl" class="form-input" type="url" placeholder="https://…" />
+                            <span class="form-hint">Banner for the category page</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Icon URL</label>
+                            <input asp-for="IconUrl" class="form-input" type="url" placeholder="https://…" />
+                            <span class="form-hint">Small icon shown in navigation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-action="Index" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Create Category
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="detail-side">
+        <div class="card">
+            <div class="card-head"><div class="card-title">Tips</div></div>
+            <div class="card-body">
+                <ul class="tips-list">
+                    <li class="tips-item">Use clear names customers will recognise.</li>
+                    <li class="tips-item">Slugs appear in URLs — keep them short and keyword-rich.</li>
+                    <li class="tips-item">Nest up to one level deep for best navigation UX.</li>
+                    <li class="tips-item">Sort order controls menu and listing sequence.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const n = document.getElementById('catName'), s = document.getElementById('catSlug');
+            let edited = false;
+            s.addEventListener('input', () => edited = true);
+            n.addEventListener('input', () => {
+                if (edited) return;
+                s.value = n.value.toLowerCase().trim()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/[\s_]+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            });
+        })();
+    </script>
+}

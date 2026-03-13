@@ -1,0 +1,181 @@
+@model AdminPanel.ViewModels.Products.ProductFormViewModel
+
+<div class="panel-hd">
+    <div class="panel-icon pi-emerald">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3
+                     2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0
+                     1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0
+                     11-18 0 9 9 0 0118 0z"/>
+        </svg>
+    </div>
+    <div class="panel-hd-text">
+        <div class="panel-title">Pricing &amp; Inventory</div>
+        <div class="panel-sub">Prices, identifiers and shipping dimensions</div>
+    </div>
+</div>
+
+
+<p class="section-label">Pricing</p>
+
+<div class="form-cols-2@(Model.IsAdminMode ? " form-cols-2--extend" : "")">
+
+    <div class="form-group">
+        <label class="form-label" for="BasePrice">
+            Selling Price <span class="req">*</span>
+        </label>
+        <div class="form-input-wrap">
+            <span class="form-icon" data-currency-symbol></span>
+            <input asp-for="BasePrice"
+                   id="BasePrice"
+                   type="number"
+                   class="form-input form-input--icon"
+                   placeholder="0.00"
+                   min="0.01"
+                   step="0.01"
+                   data-pricing-trigger />
+        </div>
+        <span asp-validation-for="BasePrice" class="field-error"></span>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="CompareAtPrice">
+            Compare-At Price
+            <span class="form-label-tip" title="Original price shown crossed out — creates a sale badge">ⓘ</span>
+        </label>
+        <div class="form-input-wrap">
+            <span class="form-icon" data-currency-symbol></span>
+            <input asp-for="CompareAtPrice"
+                   id="CompareAtPrice"
+                   type="number"
+                   class="form-input form-input--icon"
+                   placeholder="0.00"
+                   min="0"
+                   step="0.01"
+                   data-pricing-trigger />
+        </div>
+        <span id="discountHint" class="form-hint"></span>
+    </div>
+
+    @if (Model.IsAdminMode)
+    {
+        <div class="form-group">
+            <label class="form-label" for="CostPrice">
+                Cost Price
+                <span class="admin-badge">Admin only</span>
+            </label>
+            <div class="form-input-wrap">
+                <span class="form-icon" data-currency-symbol></span>
+                <input asp-for="CostPrice"
+                       id="CostPrice"
+                       type="number"
+                       class="form-input form-input--icon"
+                       placeholder="0.00"
+                       min="0"
+                       step="0.01"
+                       data-pricing-trigger />
+            </div>
+            <span id="marginHint" class="form-hint"></span>
+        </div>
+    }
+
+</div>
+
+
+<div class="form-cols-2">
+    <div class="form-group">
+        <label class="form-label" for="CurrencyCode">Currency</label>
+        <select asp-for="CurrencyCode" id="CurrencyCode" class="form-select"
+                data-currency-select>
+            <option value="INR">INR — Indian Rupee</option>
+            <option value="USD">USD — US Dollar</option>
+            <option value="EUR">EUR — Euro</option>
+            <option value="GBP">GBP — British Pound</option>
+        </select>
+    </div>
+</div>
+
+
+<p class="section-label">Identifiers</p>
+
+<div class="form-cols-2">
+    <div class="form-group">
+        <label class="form-label" for="Sku">
+            SKU <span class="opt">(optional)</span>
+        </label>
+        <input asp-for="Sku"
+               id="Sku"
+               class="form-input"
+               placeholder="e.g. WH-XM5-BLK" />
+        <span class="form-hint">Your internal product reference code</span>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="Barcode">
+            Barcode / UPC <span class="opt">(optional)</span>
+        </label>
+        <input asp-for="Barcode"
+               id="Barcode"
+               class="form-input"
+               placeholder="e.g. 4909601315009" />
+    </div>
+</div>
+
+
+<p class="section-label">
+    Physical Dimensions
+    <span class="opt">(optional — used for shipping calculations)</span>
+</p>
+
+<div class="form-cols-4">
+    <div class="form-group">
+        <label class="form-label" for="WeightKg">Weight</label>
+        <div class="input-unit-wrap">
+            <input asp-for="WeightKg"
+                   id="WeightKg"
+                   type="number"
+                   class="form-input"
+                   placeholder="0.000"
+                   min="0" step="0.001" />
+            <span class="input-unit">kg</span>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="form-label" for="LengthCm">Length</label>
+        <div class="input-unit-wrap">
+            <input asp-for="LengthCm"
+                   id="LengthCm"
+                   type="number"
+                   class="form-input"
+                   placeholder="0.00"
+                   min="0" step="0.01" />
+            <span class="input-unit">cm</span>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="form-label" for="WidthCm">Width</label>
+        <div class="input-unit-wrap">
+            <input asp-for="WidthCm"
+                   id="WidthCm"
+                   type="number"
+                   class="form-input"
+                   placeholder="0.00"
+                   min="0" step="0.01" />
+            <span class="input-unit">cm</span>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="form-label" for="HeightCm">Height</label>
+        <div class="input-unit-wrap">
+            <input asp-for="HeightCm"
+                   id="HeightCm"
+                   type="number"
+                   class="form-input"
+                   placeholder="0.00"
+                   min="0" step="0.01" />
+            <span class="input-unit">cm</span>
+        </div>
+    </div>
+</div>

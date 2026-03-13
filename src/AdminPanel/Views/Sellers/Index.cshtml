@@ -1,0 +1,242 @@
+@using AdminPanel.ViewModels.Auth
+@model SellerListViewModel
+@{
+    ViewData["Title"] = "Sellers";
+
+    string StatusBadge(string s) => s switch
+    {
+        "Active"          => "badge b-active",
+        "PendingApproval" => "badge b-pending",
+        "Rejected"        => "badge b-rejected",
+        "Suspended"       => "badge b-archived",
+        _                 => "badge b-archived"
+    };
+    string StatusLabel(string s) => s switch
+    {
+        "PendingApproval" => "Pending",
+        _ => s
+    };
+
+    var pgRoute = new Dictionary<string, string?>
+    {
+        ["search"]        = Model.Search,
+        ["sellerStatus"]  = Model.SellerStatus,
+        ["sortBy"]        = Model.SortBy,
+        ["sortDirection"] = Model.SortDirection
+    };
+}
+
+<div class="pg-bar">
+    <div>
+        <h1 class="pg-title">Sellers</h1>
+        <p class="pg-sub">@Model.TotalCount.ToString("N0") seller accounts</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-controller="Users" asp-action="Index" class="btn btn-outline btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            All Users
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-emerald" id="alert-banner">
+        <div class="alert-icon">✓</div>
+        <div class="alert-body"><div class="alert-title">@ok</div></div>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-rose" id="alert-banner">
+        <div class="alert-icon">✕</div>
+        <div class="alert-body"><div class="alert-title">@err</div></div>
+    </div>
+}
+
+@if (Model.PendingCount > 0 && string.IsNullOrEmpty(Model.SellerStatus))
+{
+    <div class="alert alert-amber" id="alert-banner">
+        <div class="alert-icon">⏳</div>
+        <div class="alert-body">
+            <div class="alert-title">@Model.PendingCount seller application@(Model.PendingCount == 1 ? "" : "s") awaiting review</div>
+            <div class="alert-desc">Approve or reject before they can list products.</div>
+        </div>
+        <a asp-action="Index" asp-route-sellerStatus="PendingApproval" class="btn btn-outline btn-sm">Review Now</a>
+    </div>
+}
+
+<div class="card">
+    <form method="get" class="filter-bar">
+        <input type="hidden" name="sortBy"        value="@Model.SortBy" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+
+        <div class="filter-search">
+            <svg class="filter-search-ico" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input name="search" value="@Model.Search" placeholder="Search name, email or business…" class="filter-input" />
+        </div>
+
+        <select name="sellerStatus" class="filter-select">
+            <option value="">All Statuses</option>
+            @foreach (var s in new[] { "PendingApproval", "Active", "Suspended", "Rejected" })
+            {
+                <option value="@s" selected="@(Model.SellerStatus == s)">@StatusLabel(s)</option>
+            }
+        </select>
+
+        <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+
+        @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.SellerStatus))
+        {
+            <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
+        }
+    </form>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <div class="empty-title">No sellers found</div>
+            <div class="empty-desc">Try adjusting your filters.</div>
+        </div>
+    }
+    else
+    {
+        <div class="tbl-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Seller</th>
+                        <th>Business</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Products</th>
+                        <th>Revenue</th>
+                        <th>Applied</th>
+                        <th style="width:120px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div class="prod-cell">
+                                    @if (!string.IsNullOrEmpty(s.AvatarUrl))
+                                    {
+                                        <img src="@s.AvatarUrl" alt="@s.FullName" class="prod-img" style="width:32px;height:32px;border-radius:50%;object-fit:cover" />
+                                    }
+                                    else
+                                    {
+                                        <div class="u-av" style="background:var(--c-sky-lt);color:var(--c-sky)">
+                                            @s.FullName.FirstOrDefault()
+                                        </div>
+                                    }
+                                    <div>
+                                        <a asp-action="Detail" asp-route-id="@s.Id" class="tbl-link">@s.FullName</a>
+                                        <div class="tbl-meta">@s.Email</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="fw-med">@s.BusinessName</td>
+                            <td class="tbl-meta">
+                                @if (!string.IsNullOrEmpty(s.City) || !string.IsNullOrEmpty(s.Country))
+                                {
+                                    @string.Join(", ", new[] { s.City, s.Country }.Where(x => !string.IsNullOrEmpty(x)))
+                                }
+                                else
+                                {
+                                    <span>—</span>
+                                }
+                            </td>
+                            <td><span class="@StatusBadge(s.SellerStatus)">@StatusLabel(s.SellerStatus)</span></td>
+                            <td>@s.TotalProducts</td>
+                            <td class="tbl-mono">₹@s.TotalRevenue.ToString("N0")</td>
+                            <td class="tbl-date">@s.CreatedAt.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <div class="row-acts">
+                                    <a asp-action="Detail" asp-route-id="@s.Id" class="row-btn" title="View">
+                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                    </a>
+                                    @if (s.SellerStatus == "PendingApproval")
+                                    {
+                                        <form asp-action="Approve" asp-route-id="@s.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="row-btn approve" title="Approve">
+                                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                    <polyline points="20 6 9 17 4 12"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                        <button type="button" class="row-btn danger" title="Reject"
+                                            onclick="openReject('@s.Id')">
+                                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                            </svg>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pagination" model="@(new AdminPanel.ViewModels.Products.PaginationViewModel
+        {
+            Page       = Model.Page,
+            PageSize   = Model.PageSize,
+            TotalCount = Model.TotalCount,
+            RouteData  = pgRoute,
+            Action     = "Index",
+            Controller = "Sellers"
+        })" />
+    }
+</div>
+
+@* Reject modal *@
+<div class="modal-backdrop" id="rejectModal" style="display:none">
+    <div class="modal-card">
+        <div class="modal-title">Reject Seller Application</div>
+        <p class="modal-desc">The seller will be notified with your reason.</p>
+        <form id="rejectForm" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label class="form-label">Reason <span style="color:var(--c-rose)">*</span></label>
+                <textarea name="reason" class="form-input" rows="3"
+                    placeholder="Explain why this application is being rejected…" required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" onclick="closeReject()">Cancel</button>
+                <button type="submit" class="btn btn-danger">Reject Application</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function openReject(id) {
+    document.getElementById('rejectForm').action = '/Sellers/' + id + '/Reject';
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+function closeReject() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
+document.getElementById('rejectModal').addEventListener('click', function(e) {
+    if (e.target === this) closeReject();
+});
+</script>
+}

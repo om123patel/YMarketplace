@@ -1,0 +1,222 @@
+@model AdminPanel.ViewModels.Products.ProductFormViewModel
+@{
+    ViewData["Title"] = Model.IsEditMode ? "Edit Product" : "New Product";
+
+    // Currency symbol resolved once — no hardcoding in partials or JS
+    var currencySymbol = Model.CurrencyCode switch
+    {
+        "USD" => "$",
+        "EUR" => "€",
+        "GBP" => "£",
+        _     => "₹"
+    };
+
+    var allSteps = new[]
+    {
+        new { Key = "basic",    Label = "Basic Info",   Sub = "Name & details" },
+        new { Key = "pricing",  Label = "Pricing",      Sub = "Price & SKU"    },
+        new { Key = "variants", Label = "Variants",     Sub = "Options & stock"},
+        new { Key = "seo",      Label = "SEO",          Sub = "Search & social"},
+        new { Key = "org",      Label = "Organisation", Sub = "Status & admin" },
+    };
+    var steps      = Model.IsAdminMode ? allSteps : allSteps.Where(s => s.Key != "org").ToArray();
+    var totalSteps = steps.Length;
+    var stepsJson  = System.Text.Json.JsonSerializer.Serialize(
+                         steps.Select((s, i) => new { key = s.Key, label = s.Label, idx = i }));
+}
+
+<div class="wiz"
+     id="wizRoot"
+     data-currency="@currencySymbol"
+     data-admin="@Model.IsAdminMode.ToString().ToLower()"
+     data-steps="@totalSteps">
+
+    <div class="wiz-topbar">
+        <div class="wiz-topbar-left">
+            <a asp-action="Index" class="wiz-crumb">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Products
+            </a>
+            <span class="wiz-crumb-sep"></span>
+            <span class="wiz-crumb-current">
+                @(Model.IsEditMode ? "Edit Product" : "New Product")
+            </span>
+            @if (Model.IsAdminMode)
+            {
+                <span class="wiz-admin-chip">
+                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112
+                                 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02
+                                 0 003 9c0 5.591 3.824 10.29 9 11.622
+                                 5.176-1.332 9-6.03 9-11.622
+                                 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    Admin
+                </span>
+            }
+        </div>
+        <div class="wiz-topbar-right">
+            <a asp-action="Index" class="btn btn-outline btn-sm">Discard</a>
+            <button type="submit" form="productForm" class="btn btn-indigo btn-sm">
+                @(Model.IsAdminMode ? "Publish Product" : "Submit for Review")
+            </button>
+        </div>
+    </div>
+
+    
+    <div class="wiz-rail">
+        <div class="wiz-steps" id="wizSteps">
+            @for (int i = 0; i < steps.Length; i++)
+            {
+                var s = steps[i];
+                <button type="button"
+                        class="wiz-step@(i == 0 ? " is-active" : "")"
+                        id="wstep-@s.Key"
+                        data-idx="@i"
+                        data-key="@s.Key">
+                    <span class="wiz-step-bubble">
+                        <svg class="wiz-step-ico-done" width="11" height="11"
+                             fill="none" viewBox="0 0 24 24"
+                             stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span class="wiz-step-num">@(i + 1)</span>
+                    </span>
+                    <span class="wiz-step-text">
+                        <span class="wiz-step-label">@s.Label</span>
+                        <span class="wiz-step-sub">@s.Sub</span>
+                    </span>
+                    @if (i < steps.Length - 1)
+                    {
+                        <span class="wiz-step-line"></span>
+                    }
+                </button>
+            }
+        </div>
+        <div class="wiz-ink" id="wizInk" aria-hidden="true"></div>
+        <div class="wiz-track" aria-hidden="true"></div>
+    </div>
+
+    
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="wiz-error" role="alert">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0
+                         2.502-1.667 1.732-3L13.732 4c-.77-1.333
+                         -2.694-1.333-3.464 0L3.34 16c-.77
+                         1.333.192 3 1.732 3z"/>
+            </svg>
+            <span>
+                @string.Join(" · ", ViewData.ModelState.Values
+                    .SelectMany(v => v.Errors).Take(3)
+                    .Select(e => e.ErrorMessage))
+            </span>
+        </div>
+    }
+
+    
+    <form asp-action="Save" method="post"
+          id="productForm" novalidate
+          class="wiz-form">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="IsAdminMode" />
+
+        <div class="wiz-body">
+
+            <div class="wiz-panel is-active" id="panel-basic">
+                @await Html.PartialAsync("Partials/_PBasicInfo", Model)
+            </div>
+
+            <div class="wiz-panel" id="panel-pricing">
+                @await Html.PartialAsync("Partials/_PPricing", Model)
+            </div>
+
+            <div class="wiz-panel" id="panel-variants">
+                @await Html.PartialAsync("Partials/_PVariants", Model)
+            </div>
+
+            <div class="wiz-panel" id="panel-seo">
+                @await Html.PartialAsync("Partials/_PSeo", Model)
+            </div>
+
+            @if (Model.IsAdminMode)
+            {
+                <div class="wiz-panel" id="panel-org">
+                    @await Html.PartialAsync("Partials/_POrganisation", Model)
+                </div>
+            }
+
+        </div>
+
+        
+        <div class="wiz-footer">
+
+            <div class="wiz-footer-side wiz-footer-side--left">
+                <button type="button" class="btn btn-outline wiz-prev"
+                        id="btnPrev" data-wiz-prev>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    Back
+                </button>
+            </div>
+
+            <div class="wiz-footer-center">
+                <div class="wiz-dots" id="wizDots" aria-hidden="true">
+                    @for (int i = 0; i < totalSteps; i++)
+                    {
+                        <span class="wiz-dot@(i == 0 ? " is-active" : "")"
+                              data-idx="@i"></span>
+                    }
+                </div>
+            </div>
+
+            <div class="wiz-footer-side wiz-footer-side--right">
+                <button type="button" class="btn btn-primary wiz-next"
+                        id="btnNext" data-wiz-next>
+                    Continue
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                    </svg>
+                </button>
+                <button type="submit"
+                        class="btn btn-indigo wiz-submit wiz-submit--hidden"
+                        id="btnSubmit">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M5 13l4 4L19 7"/>
+                    </svg>
+                    @(Model.IsAdminMode ? "Publish Product" : "Submit for Review")
+                </button>
+            </div>
+
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        window._wiz = {
+            stepCount : @totalSteps,
+            steps     : @Html.Raw(stepsJson)
+        };
+    </script>
+    <script src="~/js/product-form.js" asp-append-version="true"></script>
+}

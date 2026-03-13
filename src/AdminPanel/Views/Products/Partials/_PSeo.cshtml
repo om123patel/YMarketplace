@@ -1,0 +1,130 @@
+@model AdminPanel.ViewModels.Products.ProductFormViewModel
+
+<div class="panel-hd">
+    <div class="panel-icon pi-sky">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+    </div>
+    <div class="panel-hd-text">
+        <div class="panel-title">SEO &amp; Discoverability</div>
+        <div class="panel-sub">Search engine and social sharing metadata</div>
+    </div>
+</div>
+
+
+<div class="serp-card" id="serpCard">
+    <span class="serp-card-label">Google Search Preview</span>
+    <div class="serp-url">
+        markethub.com/products/<span id="serpSlug">@Model.Slug</span>
+    </div>
+    <div class="serp-title" id="serpTitle">
+        @(string.IsNullOrWhiteSpace(Model.MetaTitle) ? Model.Name : Model.MetaTitle)
+    </div>
+    <div class="serp-desc" id="serpDesc">
+        @(string.IsNullOrWhiteSpace(Model.MetaDescription)
+            ? "Your meta description will appear here in Google search results."
+            : Model.MetaDescription)
+    </div>
+</div>
+
+
+<div class="form-cols-2">
+    <div class="form-group">
+        <label class="form-label" for="MetaTitle">
+            Meta Title <span class="opt">(optional)</span>
+        </label>
+        <input asp-for="MetaTitle"
+               id="MetaTitle"
+               class="form-input"
+               maxlength="70"
+               placeholder="Leave blank to use product name"
+               data-seo-preview />
+        <span class="form-hint">
+            <span id="metaTitleLen">@(Model.MetaTitle?.Length ?? 0)</span>/70
+            &nbsp;·&nbsp; ideal max 60
+        </span>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="MetaKeywords">
+            Keywords <span class="opt">(optional)</span>
+        </label>
+        <input asp-for="MetaKeywords"
+               id="MetaKeywords"
+               class="form-input"
+               placeholder="wireless, headphones, noise cancelling" />
+        <span class="form-hint">Comma-separated keywords</span>
+    </div>
+</div>
+
+
+<div class="form-group">
+    <label class="form-label" for="MetaDescription">
+        Meta Description <span class="opt">(optional)</span>
+    </label>
+    <textarea asp-for="MetaDescription"
+              id="MetaDescription"
+              class="form-textarea"
+              rows="2"
+              maxlength="165"
+              placeholder="Brief description shown in search results…"
+              data-seo-preview
+              data-counter-target="metaDescLen"></textarea>
+    <span class="form-hint">
+        <span id="metaDescLen">@(Model.MetaDescription?.Length ?? 0)</span>/165
+        &nbsp;·&nbsp; ideal max 155
+    </span>
+</div>
+
+
+<div class="form-group">
+    <label class="form-label" for="CanonicalUrl">
+        Canonical URL <span class="opt">(optional)</span>
+    </label>
+    <input asp-for="CanonicalUrl"
+           id="CanonicalUrl"
+           type="url"
+           class="form-input"
+           placeholder="https://markethub.com/products/…" />
+    <span class="form-hint">Leave blank to use the default product URL</span>
+</div>
+
+
+<p class="section-label">Open Graph — Social Sharing</p>
+
+<div class="form-cols-2">
+    <div class="form-group">
+        <label class="form-label" for="OgTitle">
+            OG Title <span class="opt">(optional)</span>
+        </label>
+        <input asp-for="OgTitle"
+               id="OgTitle"
+               class="form-input"
+               placeholder="Defaults to Meta Title" />
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="OgImageUrl">
+            OG Image URL <span class="opt">(optional)</span>
+        </label>
+        <input asp-for="OgImageUrl"
+               id="OgImageUrl"
+               type="url"
+               class="form-input"
+               placeholder="https://…" />
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="form-label" for="OgDescription">
+        OG Description <span class="opt">(optional)</span>
+    </label>
+    <textarea asp-for="OgDescription"
+              id="OgDescription"
+              class="form-textarea"
+              rows="2"
+              placeholder="Defaults to Meta Description"></textarea>
+</div>

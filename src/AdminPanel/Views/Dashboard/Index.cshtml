@@ -1,0 +1,110 @@
+﻿@using AdminPanel.ViewModels
+@using AdminPanel.ViewModels.Dashboard
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="pg-bar">
+    <div>
+        <h1 class="pg-title">Dashboard</h1>
+        <p class="pg-sub">Welcome back — here's what needs your attention.</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-controller="Products" asp-action="Create" class="btn btn-primary">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add Product
+        </a>
+    </div>
+</div>
+
+@if (Model.PendingApprovals > 0)
+{
+    <div class="alert alert-amber" id="alert-banner">
+        <div class="alert-icon">⏳</div>
+        <div class="alert-body">
+            <div class="alert-title">@Model.PendingApprovals seller product(s) awaiting approval</div>
+            <div class="alert-desc">Review and approve products before they go live on the marketplace.</div>
+        </div>
+        <a asp-controller="Products" asp-action="Index"
+           asp-route-status="PendingApproval"
+           class="btn btn-outline btn-sm">Review Now</a>
+    </div>
+}
+
+<div class="stats-grid">
+    <div class="sc sc-indigo">
+        <div class="sc-head">
+            <div class="sc-icon">
+                <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="sc-trend t-up">↑ 14.5%</div>
+        </div>
+        <div class="sc-val">₹@(Model.TotalRevenue.ToString("N0"))</div>
+        <div class="sc-label">Total Revenue</div>
+        <div class="sc-chart">
+            <div class="sc-bar" style="height:38%"></div><div class="sc-bar" style="height:55%"></div>
+            <div class="sc-bar" style="height:72%"></div><div class="sc-bar" style="height:88%"></div>
+            <div class="sc-bar" style="height:60%"></div><div class="sc-bar" style="height:100%"></div>
+        </div>
+    </div>
+
+    <div class="sc sc-emerald">
+        <div class="sc-head">
+            <div class="sc-icon">
+                <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+            </div>
+            <div class="sc-trend t-up">↑ 8.2%</div>
+        </div>
+        <div class="sc-val">@Model.TotalOrders.ToString("N0")</div>
+        <div class="sc-label">Total Orders</div>
+        <div class="sc-chart">
+            <div class="sc-bar" style="height:60%"></div><div class="sc-bar" style="height:75%"></div>
+            <div class="sc-bar" style="height:50%"></div><div class="sc-bar" style="height:88%"></div>
+            <div class="sc-bar" style="height:100%"></div><div class="sc-bar" style="height:80%"></div>
+        </div>
+    </div>
+
+    <div class="sc sc-amber">
+        <div class="sc-head">
+            <div class="sc-icon">
+                <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <div class="sc-trend t-down">↓ 2.1%</div>
+        </div>
+        <div class="sc-val">@Model.ActiveProducts.ToString("N0")</div>
+        <div class="sc-label">Active Products</div>
+        <div class="sc-chart">
+            <div class="sc-bar" style="height:82%"></div><div class="sc-bar" style="height:96%"></div>
+            <div class="sc-bar" style="height:68%"></div><div class="sc-bar" style="height:78%"></div>
+            <div class="sc-bar" style="height:100%"></div><div class="sc-bar" style="height:88%"></div>
+        </div>
+    </div>
+
+    <div class="sc sc-rose">
+        <div class="sc-head">
+            <div class="sc-icon">
+                <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </div>
+            <div class="sc-trend t-up">↑ 21.3%</div>
+        </div>
+        <div class="sc-val">@Model.ActiveSellers</div>
+        <div class="sc-label">Active Sellers</div>
+        <div class="sc-chart">
+            <div class="sc-bar" style="height:28%"></div><div class="sc-bar" style="height:54%"></div>
+            <div class="sc-bar" style="height:80%"></div><div class="sc-bar" style="height:92%"></div>
+            <div class="sc-bar" style="height:100%"></div><div class="sc-bar" style="height:62%"></div>
+        </div>
+    </div>
+</div>

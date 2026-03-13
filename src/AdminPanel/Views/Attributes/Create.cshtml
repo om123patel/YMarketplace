@@ -1,0 +1,144 @@
+@using AdminPanel.ViewModels.Attributes
+@model CreateAttributeTemplateViewModel
+@{
+    ViewData["Title"] = "New Attribute Template";
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Attributes</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>New Template</span>
+        </div>
+        <h1 class="pg-title">New Attribute Template</h1>
+        <p class="pg-sub">Define a reusable attribute set for a category</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">Cancel</a>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-main">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Template Info</div>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Template Name <span>*</span></label>
+                            <input asp-for="Name" class="form-input" placeholder="e.g. Electronics Specs" />
+                            <span asp-validation-for="Name" class="field-error"></span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Category <span>*</span></label>
+                            <select asp-for="CategoryId" class="form-select">
+                                <option value="">— Select a category —</option>
+                                @foreach (var c in Model.Categories)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="CategoryId" class="field-error"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Attribute Rows</div>
+                    <div class="card-actions">
+                        <button type="button" class="btn btn-outline btn-sm" id="addRowBtn">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            Add Attribute
+                        </button>
+                    </div>
+                </div>
+                <div id="attrRows">
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        <partial name="_AttributeRow" model="@(new AttributeRowViewModel { Row = Model.Items[i], Index = i })" />
+                    }
+                </div>
+                <div id="attrEmpty" class="attr-empty @(Model.Items.Any() ? "attr-empty--hidden" : "")">
+                    <span class="attr-empty-text">No attributes yet — click "Add Attribute" to begin.</span>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-action="Index" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Create Template
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="detail-side">
+        <div class="card">
+            <div class="card-head"><div class="card-title">Input Types</div></div>
+            <div class="card-body">
+                <ul class="input-type-list">
+                    @foreach (var (type, desc) in new[]
+                                        {
+                                        ("Text",        "Free text — colour, material"),
+                                        ("Number",      "Numeric value — weight, size"),
+                                        ("Boolean",     "Yes / No toggle"),
+                                        ("Select",      "Single pick from a list"),
+                                        ("MultiSelect", "Multiple picks from a list")
+                                        })
+                    {
+                        <li class="input-type-item">
+                            <span class="input-type-name">@type</span>
+                            <span class="input-type-desc">@desc</span>
+                        </li>
+                    }
+                </ul>
+                <p class="input-type-note">
+                    For Select &amp; MultiSelect, enter comma-separated options in the Options field.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let rowIdx = @Model.Items.Count;
+
+        document.getElementById('addRowBtn').addEventListener('click', () => {
+            fetch(`/Attributes/RowTemplate?index=${rowIdx}`)
+                .then(r => r.text())
+                .then(html => {
+                    document.getElementById('attrRows').insertAdjacentHTML('beforeend', html);
+                    document.getElementById('attrEmpty').classList.add('attr-empty--hidden');
+                    rowIdx++;
+                });
+        });
+
+        document.getElementById('attrRows').addEventListener('click', e => {
+            if (e.target.closest('.attr-row-remove')) {
+                e.target.closest('.attr-row').remove();
+                if (!document.querySelectorAll('.attr-row').length)
+                    document.getElementById('attrEmpty').classList.remove('attr-empty--hidden');
+            }
+        });
+
+        function toggleOptions(sel) {
+            const inp = sel.closest('.attr-row').querySelector('.attr-options-input');
+            const needs = sel.value === 'Select' || sel.value === 'MultiSelect';
+            inp.classList.toggle('attr-options-disabled', !needs);
+        }
+    </script>
+}

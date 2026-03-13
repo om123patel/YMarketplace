@@ -1,0 +1,201 @@
+@model AdminPanel.ViewModels.Products.ProductFormViewModel
+
+<div class="panel-hd">
+    <div class="panel-icon pi-indigo">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+    </div>
+    <div class="panel-hd-text">
+        <div class="panel-title">Basic Information</div>
+        <div class="panel-sub">Product name, category, brand and description</div>
+    </div>
+</div>
+
+
+<div class="form-cols-2">
+    <div class="form-group">
+        <label class="form-label" for="Name">
+            Product Name <span class="req">*</span>
+        </label>
+        <input asp-for="Name"
+               id="Name"
+               class="form-input"
+               placeholder="e.g. Wireless Noise-Cancelling Headphones"
+               maxlength="300"
+               autocomplete="off"
+               data-slug-source />
+        <span class="form-hint">
+            <span id="nameLen">@(Model.Name?.Length ?? 0)</span> / 300 characters
+        </span>
+        <span asp-validation-for="Name" class="field-error"></span>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="Slug">
+            URL Slug <span class="req">*</span>
+        </label>
+        <div class="input-affix-wrap">
+            <span class="input-prefix">/products/</span>
+            <input asp-for="Slug"
+                   id="Slug"
+                   class="form-input input-has-prefix"
+                   placeholder="wireless-headphones"
+                   autocomplete="off"
+                   data-slug-target />
+            <button type="button" class="input-action-btn"
+                    data-regen-slug
+                    title="Re-generate from name">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0
+                             004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003
+                             8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            </button>
+        </div>
+        <span asp-validation-for="Slug" class="field-error"></span>
+    </div>
+</div>
+
+
+<div class="form-cols-2">
+    <div class="form-group">
+        <label class="form-label" for="CategoryId">
+            Category <span class="req">*</span>
+        </label>
+        <select asp-for="CategoryId" id="CategoryId" class="form-select">
+            <option value="0">— Select category —</option>
+            @foreach (var c in Model.Categories)
+            {
+                <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">
+                    @c.Name
+                </option>
+            }
+        </select>
+        <span asp-validation-for="CategoryId" class="field-error"></span>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="BrandId">
+            Brand <span class="opt">(optional)</span>
+        </label>
+        <select asp-for="BrandId" id="BrandId" class="form-select">
+            <option value="">— No brand —</option>
+            @foreach (var b in Model.Brands)
+            {
+                <option value="@b.Id" selected="@(Model.BrandId == b.Id)">
+                    @b.Name
+                </option>
+            }
+        </select>
+    </div>
+</div>
+
+
+<div class="form-group">
+    <label class="form-label" for="ShortDescription">
+        Short Description <span class="opt">(optional)</span>
+    </label>
+    <textarea asp-for="ShortDescription"
+              id="ShortDescription"
+              class="form-textarea"
+              rows="2"
+              maxlength="500"
+              placeholder="Brief summary shown in product listings…"
+              data-counter-target="shortDescLen"></textarea>
+    <span class="form-hint">
+        <span id="shortDescLen">@(Model.ShortDescription?.Length ?? 0)</span> / 500
+    </span>
+</div>
+
+
+<div class="form-group">
+    <label class="form-label">
+        Full Description <span class="opt">(optional)</span>
+    </label>
+    <div class="rte-wrap" data-rte>
+        <div class="rte-bar">
+            <button type="button" class="rte-btn" data-rte-cmd="bold"
+                    title="Bold"><b>B</b></button>
+            <button type="button" class="rte-btn" data-rte-cmd="italic"
+                    title="Italic"><i>I</i></button>
+            <button type="button" class="rte-btn" data-rte-cmd="underline"
+                    title="Underline"><u>U</u></button>
+            <span class="rte-divider" aria-hidden="true"></span>
+            <button type="button" class="rte-btn"
+                    data-rte-cmd="insertUnorderedList" title="Bullet list">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                </svg>
+            </button>
+            <button type="button" class="rte-btn"
+                    data-rte-cmd="insertOrderedList" title="Numbered list">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+                </svg>
+            </button>
+            <span class="rte-divider" aria-hidden="true"></span>
+            <button type="button" class="rte-btn"
+                    data-rte-cmd="removeFormat" title="Clear formatting">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M6 18L17.94 6M4 6h16"/>
+                </svg>
+            </button>
+        </div>
+        <div id="rteEditor"
+             class="rte-editor"
+             contenteditable="true"
+             data-rte-editor
+             data-placeholder="Detailed product description…">@Html.Raw(Model.Description)</div>
+    </div>
+    <input type="hidden" asp-for="Description" id="Description" data-rte-hidden />
+</div>
+
+
+@if (Model.AvailableTags.Any())
+{
+    <div class="form-group">
+        <label class="form-label">
+            Tags <span class="opt">(optional)</span>
+        </label>
+        <div class="tag-picker" role="group" aria-label="Product tags">
+            @foreach (var tag in Model.AvailableTags)
+            {
+                <label class="tag-chip@(tag.Selected ? " is-on" : "")">
+                    <input type="checkbox"
+                           name="TagIds"
+                           value="@tag.Id"
+                           checked="@tag.Selected"
+                           data-tag-checkbox />
+                    @tag.Name
+                </label>
+            }
+        </div>
+    </div>
+}
+
+
+<div class="toggle-row">
+    <div class="toggle-info">
+        <span class="toggle-label">Digital Product</span>
+        <span class="toggle-desc">
+            No physical delivery needed — software, ebook, course, etc.
+        </span>
+    </div>
+    <label class="toggle">
+        <input type="checkbox" asp-for="IsDigital" value="true" />
+        <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+        </span>
+    </label>
+</div>

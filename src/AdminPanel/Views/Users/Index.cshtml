@@ -1,0 +1,191 @@
+@using AdminPanel.ViewModels.Auth
+@model UserListViewModel
+@{
+    ViewData["Title"] = "Users";
+
+    string RoleBadge(string r) => r switch
+    {
+        "Admin"  => "badge b-active",
+        "Seller" => "badge b-pending",
+        "Buyer"  => "badge b-draft",
+        _        => "badge b-archived"
+    };
+    string StatusBadge(string s) => s switch
+    {
+        "Active"              => "badge b-active",
+        "Suspended"           => "badge b-rejected",
+        "PendingVerification" => "badge b-pending",
+        _                     => "badge b-archived"
+    };
+    string StatusLabel(string s) => s switch
+    {
+        "PendingVerification" => "Pending",
+        _ => s
+    };
+
+    var pgRoute = new Dictionary<string, string?>
+    {
+        ["search"]        = Model.Search,
+        ["role"]          = Model.Role,
+        ["status"]        = Model.Status,
+        ["sortBy"]        = Model.SortBy,
+        ["sortDirection"] = Model.SortDirection
+    };
+}
+
+<div class="pg-bar">
+    <div>
+        <h1 class="pg-title">Users</h1>
+        <p class="pg-sub">@Model.TotalCount.ToString("N0") registered users</p>
+    </div>
+    <div class="pg-actions">
+        <a asp-controller="Sellers" asp-action="Index" class="btn btn-outline btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Sellers
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-emerald" id="alert-banner">
+        <div class="alert-icon">✓</div>
+        <div class="alert-body"><div class="alert-title">@ok</div></div>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-rose" id="alert-banner">
+        <div class="alert-icon">✕</div>
+        <div class="alert-body"><div class="alert-title">@err</div></div>
+    </div>
+}
+
+<div class="card">
+    <form method="get" class="filter-bar">
+        <input type="hidden" name="sortBy"        value="@Model.SortBy" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+
+        <div class="filter-search">
+            <svg class="filter-search-ico" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input name="search" value="@Model.Search" placeholder="Search name or email…" class="filter-input" />
+        </div>
+
+        <select name="role" class="filter-select">
+            <option value="">All Roles</option>
+            @foreach (var r in new[] { "Admin", "Seller", "Buyer" })
+            {
+                <option value="@r" selected="@(Model.Role == r)">@r</option>
+            }
+        </select>
+
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            @foreach (var s in new[] { "Active", "Suspended", "Inactive", "PendingVerification" })
+            {
+                <option value="@s" selected="@(Model.Status == s)">@StatusLabel(s)</option>
+            }
+        </select>
+
+        <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+
+        @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.Role) || !string.IsNullOrEmpty(Model.Status))
+        {
+            <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
+        }
+    </form>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </div>
+            <div class="empty-title">No users found</div>
+            <div class="empty-desc">Try adjusting your filters.</div>
+        </div>
+    }
+    else
+    {
+        <div class="tbl-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Login</th>
+                        <th>Joined</th>
+                        <th style="width:80px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div class="prod-cell">
+                                    <div class="u-av" style="background:var(--c-indigo-lt);color:var(--c-indigo)">
+                                        @u.FullName.FirstOrDefault()
+                                    </div>
+                                    <div>
+                                        <a asp-action="Detail" asp-route-id="@u.Id" class="tbl-link">@u.FullName</a>
+                                        @if (u.FailedLoginAttempts >= 3)
+                                        {
+                                            <span class="badge b-rejected badge-xs" title="@u.FailedLoginAttempts failed attempts">Locked</span>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="tbl-mono">@u.Email</td>
+                            <td><span class="@RoleBadge(u.Role)">@u.Role</span></td>
+                            <td><span class="@StatusBadge(u.Status)">@StatusLabel(u.Status)</span></td>
+                            <td class="tbl-date">
+                                @(u.LastLoginAt.HasValue ? u.LastLoginAt.Value.ToString("dd MMM yyyy") : "Never")
+                            </td>
+                            <td class="tbl-date">@u.CreatedAt.ToString("dd MMM yyyy")</td>
+                            <td>
+                                <div class="row-acts">
+                                    <a asp-action="Detail" asp-route-id="@u.Id" class="row-btn" title="View">
+                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
+                                    </a>
+                                    @if (u.Status == "Suspended" || u.Status == "Inactive")
+                                    {
+                                        <form asp-action="Activate" asp-route-id="@u.Id" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="row-btn approve" title="Activate">
+                                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                    <polyline points="20 6 9 17 4 12"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pagination" model="@(new AdminPanel.ViewModels.Products.PaginationViewModel
+        {
+            Page       = Model.Page,
+            PageSize   = Model.PageSize,
+            TotalCount = Model.TotalCount,
+            RouteData  = pgRoute,
+            Action     = "Index",
+            Controller = "Users"
+        })" />
+    }
+</div>

@@ -1,0 +1,575 @@
+@model AdminPanel.ViewModels.Products.ProductDetailViewModel
+@{
+    ViewData["Title"] = Model.Name;
+
+    var currencySymbol = Model.CurrencyCode switch
+    {
+        "USD" => "$",
+        "EUR" => "€",
+        "GBP" => "£",
+        _ => "₹"
+    };
+
+    var statusBadge = Model.Status switch
+    {
+        "Active" => "badge b-active",
+        "PendingApproval" => "badge b-pending",
+        "Rejected" => "badge b-rejected",
+        "Draft" => "badge b-draft",
+        "Archived" => "badge b-archived",
+        _ => "badge b-archived"
+    };
+
+    var statusLabel = Model.Status switch
+    {
+        "PendingApproval" => "Pending Approval",
+        _ => Model.Status
+    };
+
+    bool canApprove = Model.CanApprove;
+    bool canReject = Model.CanReject;
+    bool canArchive = Model.CanArchive;
+    bool canDelete = Model.CanDelete;
+    bool canEdit = Model.CanEdit;
+}
+
+
+<div class="pg-bar">
+    <div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--c-ink-4);margin-bottom:6px;">
+            <a asp-action="Index" style="color:var(--c-ink-3);transition:color var(--dur);">Products</a>
+            <span>›</span>
+            <span style="color:var(--c-ink-2);">@Model.Name</span>
+        </div>
+        <h1 class="pg-title">@Model.Name</h1>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:5px;">
+            <span class="@statusBadge">@statusLabel</span>
+            @if (Model.IsFeatured)
+            {
+                <span class="badge b-draft">Featured</span>
+            }
+            @if (Model.IsSellerProduct)
+            {
+                <span style="font-size:12px;color:var(--c-ink-4);">by @Model.SellerName</span>
+            }
+        </div>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-ghost btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Back
+        </a>
+        @if (canEdit)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline btn-sm">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                Edit
+            </a>
+        }
+        @if (canApprove)
+        {
+            <form asp-action="Approve" asp-route-id="@Model.Id" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-indigo btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                    Approve
+                </button>
+            </form>
+        }
+        @if (canReject)
+        {
+            <button type="button" class="btn btn-outline btn-sm" id="btnOpenReject">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                Reject
+            </button>
+        }
+    </div>
+</div>
+
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert" style="background:var(--c-emerald-lt);border-color:#6ee7b7;" id="alert-banner">
+        <div class="alert-icon" style="background:rgba(5,150,105,.12);color:var(--c-emerald);">✓</div>
+        <div class="alert-body"><div class="alert-title">@ok</div></div>
+    </div>
+}
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-rose" id="alert-banner">
+        <div class="alert-icon">✕</div>
+        <div class="alert-body"><div class="alert-title">@err</div></div>
+    </div>
+}
+
+
+@if (Model.Status == "PendingApproval")
+{
+    <div class="alert alert-amber">
+        <div class="alert-icon">⏳</div>
+        <div class="alert-body">
+            <div class="alert-title">This product is awaiting your approval</div>
+            <div class="alert-desc">Review the details below, then approve or reject.</div>
+        </div>
+    </div>
+}
+
+
+<div class="grid-cols" style="align-items:start;">
+
+
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+
+        @if (Model.Images.Any() || !string.IsNullOrEmpty(Model.PrimaryImageUrl))
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Images</div>
+                    @if (Model.Images.Any())
+                    {
+                        <span class="card-sub">@Model.Images.Count image(s)</span>
+                    }
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+                    @* Primary hero *@
+                    @{
+                        var heroUrl = Model.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl
+                        ?? Model.PrimaryImageUrl
+                        ?? Model.Images.FirstOrDefault()?.ImageUrl;
+                    }
+                    @if (!string.IsNullOrEmpty(heroUrl))
+                    {
+                        <div style="width:100%;aspect-ratio:16/9;border-radius:var(--r-lg);overflow:hidden;background:var(--c-canvas);border:1px solid var(--c-border);">
+                            <img src="@heroUrl" alt="@Model.Name"
+                                 style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
+                        </div>
+                    }
+                    @* Thumbnail strip *@
+                    @if (Model.Images.Count > 1)
+                    {
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            @foreach (var img in Model.Images.OrderBy(i => i.SortOrder))
+                            {
+                                <div style="width:64px;height:64px;border-radius:var(--r-md);overflow:hidden;border:2px solid @(img.IsPrimary ? "var(--c-indigo)" : "var(--c-border)");flex-shrink:0;background:var(--c-canvas);">
+                                    <img src="@img.ImageUrl" alt="@(img.AltText ?? Model.Name)"
+                                         style="width:100%;height:100%;object-fit:cover;" loading="lazy" />
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @* Core product details *@
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">Product Details</div>
+                <span class="card-sub">Created @Model.CreatedAt.ToString("dd MMM yyyy")</span>
+            </div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:0;">
+
+                @* Pricing hero row *@
+                <div style="display:flex;align-items:baseline;gap:10px;padding-bottom:18px;border-bottom:1px solid var(--c-border);margin-bottom:18px;">
+                    <span style="font-family:var(--f-display);font-size:28px;font-weight:800;color:var(--c-ink);letter-spacing:-.5px;">
+                        @currencySymbol@Model.BasePrice.ToString("N2")
+                    </span>
+                    <span style="font-size:13px;color:var(--c-ink-4);">@Model.CurrencyCode</span>
+                    @if (Model.CompareAtPrice.HasValue && Model.CompareAtPrice > 0)
+                    {
+                        <span class="price-old">@currencySymbol@Model.CompareAtPrice.Value.ToString("N2")</span>
+                    }
+                </div>
+
+                @* Field grid *@
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+
+                    @* Helper: single field row spanning both columns *@
+                    @{
+                        void FullRow(string label, string value, bool mono = false)
+                        {
+                            <div style="display:flex;flex-direction:column;gap:3px;padding:11px 0;border-bottom:1px solid var(--c-border);">
+                                <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);">@label</span>
+                                <span style="font-size:14px;color:var(--c-ink);@(mono ? "font-family:monospace;font-size:13px;" : "")">@value</span>
+                            </div>
+                        }
+                        void HalfRow(string label, string value, bool mono = false, bool last = false)
+                        {
+                            <div style="display:flex;flex-direction:column;gap:3px;padding:11px 0;@(!last ? "border-bottom:1px solid var(--c-border);" : "")">
+                                <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);">@label</span>
+                                <span style="font-size:14px;color:var(--c-ink);@(mono ? "font-family:monospace;font-size:13px;" : "")">@value</span>
+                            </div>
+                        }
+                    }
+
+                    <div style="grid-column:1/-1;">@{
+                    FullRow("Name", Model.Name);
+                                        }
+</div>
+                    <div style="grid-column:1/-1;">@{
+                                        FullRow("Slug", Model.Slug, mono: true);
+                                        }
+</div>
+
+                    <div style="padding-right:16px;">@{
+                                        HalfRow("Category", Model.CategoryName ?? "—");
+                                        }
+</div>
+                    <div>@{
+                                        HalfRow("Brand", Model.BrandName ?? "—");
+                                        }
+</div>
+
+                    <div style="padding-right:16px;">@{
+                                        HalfRow("SKU", Model.Sku ?? "—", mono: true);
+                                        }
+</div>
+                    <div>
+                        <div style="display:flex;flex-direction:column;gap:3px;padding:11px 0;border-bottom:1px solid var(--c-border);">
+                            <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);">Type</span>
+                            @* <span style="font-size:14px;color:var(--c-ink);">@(Model.IsDigital ? "Digital" : "Physical")</span> *@
+                        </div>
+                    </div>
+
+                    <div style="padding-right:16px;">
+                        <div style="display:flex;flex-direction:column;gap:3px;padding:11px 0;border-bottom:1px solid var(--c-border);">
+                            <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);">Active</span>
+                            <span>
+                                @if (Model.IsActive)
+                                {
+                                    <span class="badge b-active">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge b-archived">No</span>
+                                }
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display:flex;flex-direction:column;gap:3px;padding:11px 0;border-bottom:1px solid var(--c-border);">
+                            <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);">Featured</span>
+                            <span style="font-size:14px;color:var(--c-ink);">@(Model.IsFeatured ? "Yes" : "No")</span>
+                        </div>
+                    </div>
+
+                    <div style="grid-column:1/-1;">
+                        <div style="display:flex;flex-direction:column;gap:3px;padding:11px 0;">
+                            <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);">Seller</span>
+                            <span style="font-size:14px;color:var(--c-ink);">@(Model.SellerName ?? "Platform (Admin)")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Descriptions *@
+        @if (!string.IsNullOrWhiteSpace(Model.ShortDescription) || !string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Description</div>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+                    @if (!string.IsNullOrWhiteSpace(Model.ShortDescription))
+                    {
+                        <div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);margin-bottom:6px;">Short Description</div>
+                            <p style="font-size:14px;color:var(--c-ink-2);line-height:1.6;">@Model.ShortDescription</p>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.Description))
+                    {
+                        <div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);margin-bottom:6px;">Full Description</div>
+                            <p style="font-size:14px;color:var(--c-ink-2);line-height:1.6;">@Model.Description</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @* SEO *@
+        @if (!string.IsNullOrWhiteSpace(Model.MetaTitle) || !string.IsNullOrWhiteSpace(Model.MetaDescription))
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">SEO</div>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+                    @if (!string.IsNullOrWhiteSpace(Model.MetaTitle))
+                    {
+                        <div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);margin-bottom:4px;">Meta Title</div>
+                            <p style="font-size:13.5px;color:var(--c-ink-2);">@Model.MetaTitle</p>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.MetaDescription))
+                    {
+                        <div>
+                            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--c-ink-4);margin-bottom:4px;">Meta Description</div>
+                            <p style="font-size:13.5px;color:var(--c-ink-2);">@Model.MetaDescription</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @* Variants *@
+        @if (Model.Variants.Any())
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Variants</div>
+                    <span class="card-sub">@Model.Variants.Count variant(s)</span>
+                </div>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>SKU</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in Model.Variants)
+                            {
+                                <tr>
+                                    <td style="font-weight:600;color:var(--c-ink);">@v.Name</td>
+                                    <td style="font-family:monospace;font-size:12.5px;color:var(--c-ink-3);">@(v.Sku ?? "—")</td>
+                                    <td style="font-family:var(--f-display);font-weight:700;color:var(--c-ink);">@currencySymbol@v.Price.ToString("N2")</td>
+                                    <td>
+                                        @if (v.StockQuantity <= 0)
+                                        {
+                                            <span class="badge b-rejected">Out of stock</span>
+                                        }
+                                        else if (v.StockQuantity <= 5)
+                                        {
+                                            <span class="badge b-pending">@v.StockQuantity left</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="font-size:13.5px;color:var(--c-ink-2);">@v.StockQuantity</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+    </div>
+
+    
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+        
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">Status</div>
+                <span class="@statusBadge">@statusLabel</span>
+            </div>
+            <div style="padding:16px;display:flex;flex-direction:column;gap:8px;">
+
+                
+                <div style="display:flex;flex-direction:column;gap:0;margin-bottom:12px;border:1px solid var(--c-border);border-radius:var(--r-lg);overflow:hidden;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--c-border);background:var(--c-surface);">
+                        <span style="font-size:12px;color:var(--c-ink-4);font-weight:500;">Active</span>
+                        @if (Model.IsActive)
+                        {
+                            <span class="badge b-active">Yes</span>
+                        }
+                        else
+                        {
+                            <span class="badge b-archived">No</span>
+                        }
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--c-border);">
+                        <span style="font-size:12px;color:var(--c-ink-4);font-weight:500;">Featured</span>
+                        <span style="font-size:13px;color:var(--c-ink-2);">@(Model.IsFeatured ? "Yes" : "No")</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--c-border);">
+                        <span style="font-size:12px;color:var(--c-ink-4);font-weight:500;">Type</span>
+                        @* <span style="font-size:13px;color:var(--c-ink-2);">@(Model.IsDigital ? "Digital" : "Physical")</span> *@
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;">
+                        <span style="font-size:12px;color:var(--c-ink-4);font-weight:500;">Created</span>
+                        <span style="font-size:13px;color:var(--c-ink-2);">@Model.CreatedAt.ToString("dd MMM yyyy")</span>
+                    </div>
+                </div>
+
+                
+                @if (canApprove)
+                {
+                    <form asp-action="Approve" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-indigo"
+                                style="width:100%;justify-content:center;">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12" /></svg>
+                            Approve Product
+                        </button>
+                    </form>
+                }
+                @if (canReject)
+                {
+                    <button type="button" class="btn btn-outline" id="btnOpenReject2"
+                            style="width:100%;justify-content:center;">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        Reject Product
+                    </button>
+                }
+                @if (canArchive)
+                {
+                    <form asp-action="Archive" asp-route-id="@Model.Id" method="post" id="archiveForm">
+                        @Html.AntiForgeryToken()
+                        <button type="button" class="btn btn-ghost"
+                                style="width:100%;justify-content:center;color:var(--c-ink-3);"
+                                id="btnArchive">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                            Archive
+                        </button>
+                    </form>
+                }
+                @if (canEdit)
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline"
+                       style="width:100%;justify-content:center;">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                        Edit Product
+                    </a>
+                }
+            </div>
+        </div>
+
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="mini-stat">
+                <div class="mini-ico" style="background:var(--c-indigo-lt);color:var(--c-indigo);">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5l5 5v11a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h2z" /></svg>
+                </div>
+                <div>
+                    <div class="mini-val">@Model.Variants.Count</div>
+                    <div class="mini-lbl">Variants</div>
+                </div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-ico" style="background:var(--c-emerald-lt);color:var(--c-emerald);">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01" /></svg>
+                </div>
+                <div>
+                    <div class="mini-val">@Model.Images.Count</div>
+                    <div class="mini-lbl">Images</div>
+                </div>
+            </div>
+        </div>
+
+        
+        @if (canDelete)
+        {
+            <div class="card" style="border-color:#fecdd3;">
+                <div class="card-head" style="background:var(--c-rose-lt);border-bottom-color:#fecdd3;">
+                    <div class="card-title" style="color:var(--c-rose);">Danger Zone</div>
+                </div>
+                <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+                    <p style="font-size:12.5px;color:var(--c-ink-3);line-height:1.5;">
+                        Permanently delete this product and all associated data. This cannot be undone.
+                    </p>
+                    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" id="deleteForm">
+                        @Html.AntiForgeryToken()
+                        <button type="button" class="btn btn-danger btn-sm"
+                                style="width:100%;justify-content:center;"
+                                id="btnDelete">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14H6L5 6m5 0V4h4v2" /></svg>
+                            Delete Product
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+
+<div class="modal-backdrop" id="rejectModal" style="display:none">
+    <div class="modal-card" style="max-width:480px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <h3 class="modal-title">Reject Product</h3>
+            <button type="button" id="btnCloseReject"
+                    style="width:32px;height:32px;border-radius:var(--r-sm);background:var(--c-canvas);border:1px solid var(--c-border);display:flex;align-items:center;justify-content:center;color:var(--c-ink-3);cursor:pointer;">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+        </div>
+        <p class="modal-desc">Provide a clear reason so the seller knows what to fix before resubmitting.</p>
+        <form asp-action="Reject" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+            <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">
+                    Rejection Reason
+                    <span style="color:var(--c-rose);">*</span>
+                </label>
+                <textarea name="reason" class="form-textarea" rows="4"
+                          placeholder="e.g. Product images are missing. Please add at least 3 clear photos."
+                          required></textarea>
+                <span class="form-hint">The seller will see this message.</span>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline" id="btnCloseReject2">Cancel</button>
+                <button type="submit" class="btn btn-danger">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    Reject Product
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            // Reject modal open/close
+            var modal = document.getElementById('rejectModal');
+            function openReject()  { modal.style.display = 'flex'; }
+            function closeReject() { modal.style.display = 'none'; }
+
+            var btnOpen  = document.getElementById('btnOpenReject');
+            var btnOpen2 = document.getElementById('btnOpenReject2');
+            var btnClose  = document.getElementById('btnCloseReject');
+            var btnClose2 = document.getElementById('btnCloseReject2');
+
+            if (btnOpen)   btnOpen.addEventListener('click',  openReject);
+            if (btnOpen2)  btnOpen2.addEventListener('click', openReject);
+            if (btnClose)  btnClose.addEventListener('click',  closeReject);
+            if (btnClose2) btnClose2.addEventListener('click', closeReject);
+
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) closeReject();
+            });
+
+            // Archive confirm
+            var btnArchive = document.getElementById('btnArchive');
+            if (btnArchive) {
+                btnArchive.addEventListener('click', function () {
+                    if (confirm('Archive this product? It will no longer be visible to buyers.')) {
+                        document.getElementById('archiveForm').submit();
+                    }
+                });
+            }
+
+            // Delete confirm
+            var btnDelete = document.getElementById('btnDelete');
+            if (btnDelete) {
+                btnDelete.addEventListener('click', function () {
+                    if (confirm('Delete "@Html.Raw(Model.Name.Replace("'", "\\'"))"? This cannot be undone.')) {
+                        document.getElementById('deleteForm').submit();
+                    }
+                });
+            }
+        }());
+    </script>
+}
