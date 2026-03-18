@@ -1,10 +1,11 @@
 ﻿using Identity.Application.DTOs;
+using Identity.Application.Interfaces;
 using Identity.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Web.API.Extensions;
 
-namespace Web.API.Controllers.Auth
+namespace Web.API.Controllers.Identity
 {
     [Route("api/auth")]
     public class AuthController : BaseController
@@ -12,18 +13,14 @@ namespace Web.API.Controllers.Auth
         private readonly IAuthService _authService;
 
         public AuthController(IAuthService authService)
-        {
-            _authService = authService;
-        }
+            => _authService = authService;
 
         // POST api/auth/register
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register(
-            [FromBody] RegisterUserDto dto,
-            CancellationToken ct)
+            [FromBody] RegisterDto dto, CancellationToken ct)
         {
-            var ipAddress = GetIpAddress();
             var result = await _authService.RegisterAsync(dto, ct);
             return HandleResult(result);
         }
@@ -32,11 +29,10 @@ namespace Web.API.Controllers.Auth
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<IActionResult> Login(
-            [FromBody] LoginDto dto,
-            CancellationToken ct)
+            [FromBody] LoginDto dto, CancellationToken ct)
         {
-            dto.IpAddress = GetIpAddress();
-            var result = await _authService.LoginAsync(dto, ct);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var result = await _authService.LoginAsync(dto, ip, ct);
             return HandleResult(result);
         }
 
@@ -44,60 +40,39 @@ namespace Web.API.Controllers.Auth
         [HttpPost("refresh")]
         [AllowAnonymous]
         public async Task<IActionResult> Refresh(
-            [FromBody] RefreshTokenDto dto,
-            CancellationToken ct)
+            [FromBody] RefreshRequestDto dto, CancellationToken ct)
         {
-            dto.IpAddress = GetIpAddress();
-            var result = await _authService.RefreshTokenAsync(dto, ct);
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var result = await _authService.RefreshTokenAsync(dto.RefreshToken, ip, ct);
             return HandleResult(result);
         }
 
-        // POST api/auth/revoke
-        [HttpPost("revoke")]
+        // POST api/auth/logout
+        [HttpPost("logout")]
         [Authorize]
-        public async Task<IActionResult> Revoke(
-            [FromBody] string refreshToken,
-            CancellationToken ct)
+        public async Task<IActionResult> Logout(
+            [FromBody] RefreshRequestDto dto, CancellationToken ct)
         {
-            var result = await _authService.RevokeTokenAsync(refreshToken, ct);
+            var userId = User.GetUserId();
+            var result = await _authService.RevokeTokenAsync(
+                dto.RefreshToken, userId, ct);
             return HandleResult(result);
         }
 
         // GET api/auth/me
         [HttpGet("me")]
         [Authorize]
-        public async Task<IActionResult> Me(CancellationToken ct)
+        public async Task<IActionResult> Me(
+            [FromServices] IUserService userService, CancellationToken ct)
         {
             var userId = User.GetUserId();
-            var result = await _authService.GetCurrentUserAsync(userId, ct);
+            var result = await userService.GetByIdAsync(userId, ct);
             return HandleResult(result);
         }
+    }
 
-        // PUT api/auth/profile
-        [HttpPut("profile")]
-        [Authorize]
-        public async Task<IActionResult> UpdateProfile(
-            [FromBody] UpdateProfileDto dto,
-            CancellationToken ct)
-        {
-            var userId = User.GetUserId();
-            var result = await _authService.UpdateProfileAsync(userId, dto, ct);
-            return HandleResult(result);
-        }
-
-        // PUT api/auth/change-password
-        [HttpPut("change-password")]
-        [Authorize]
-        public async Task<IActionResult> ChangePassword(
-            [FromBody] ChangePasswordDto dto,
-            CancellationToken ct)
-        {
-            var userId = User.GetUserId();
-            var result = await _authService.ChangePasswordAsync(userId, dto, ct);
-            return HandleResult(result);
-        }
-
-        private string GetIpAddress()
-            => HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    public class RefreshRequestDto
+    {
+        public string RefreshToken { get; set; } = string.Empty;
     }
 }

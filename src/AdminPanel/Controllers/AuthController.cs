@@ -38,6 +38,7 @@ namespace AdminPanel.Controllers
         }
 
         // POST /auth/login
+        // POST /auth/login
         [HttpPost("login")]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -51,29 +52,31 @@ namespace AdminPanel.Controllers
 
             if (result?.Success != true || result.Data is null)
             {
-                model.Error = result?.Error
-                    ?? "Login failed. Please check your credentials.";
+                model.Error = result?.Error ?? "Login failed. Please check your credentials.";
                 return View(model);
             }
 
             var data = result.Data;
 
-            // Only allow Admin role into the panel
             if (!data.User.Role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
             {
                 model.Error = "Access denied. Admin accounts only.";
                 return View(model);
             }
 
-            // Store JWT in server-side session
+            // 1. Store JWT in server-side session
             _tokenService.StoreTokens(data.AccessToken, data.RefreshToken);
 
-            // Sign in with cookie auth — claims sourced from JWT payload
+            // 2. Also embed tokens in claims so they survive session loss
             var claims = new List<Claim>
             {
-                new(ClaimTypes.Email,  data.User.Email),
-                new(ClaimTypes.Name,   data.User.FullName),
-                new(ClaimTypes.Role,   data.User.Role),
+                new(ClaimTypes.NameIdentifier, data.User.Id.ToString()),
+                new(ClaimTypes.Email,          data.User.Email),
+                new(ClaimTypes.Name,           data.User.FullName),
+                new(ClaimTypes.Role,           data.User.Role),
+                // Embed JWT directly in cookie claim as fallback
+                new("access_token",  data.AccessToken),
+                new("refresh_token", data.RefreshToken),
             };
 
             var identity = new ClaimsIdentity(claims, "AdminCookie");
@@ -83,7 +86,7 @@ namespace AdminPanel.Controllers
                 new AuthenticationProperties
                 {
                     IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8),
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
                 });
 
             var returnUrl = model.ReturnUrl;

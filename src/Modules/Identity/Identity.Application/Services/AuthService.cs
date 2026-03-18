@@ -1,11 +1,10 @@
-﻿using AutoMapper;
-using FluentValidation;
+﻿// Identity.Application/Services/AuthService.cs
 using Identity.Application.DTOs;
 using Identity.Application.Interfaces;
 using Identity.Application.Services.Interfaces;
 using Identity.Domain.Entities;
 using Identity.Domain.Enums;
-using Identity.Domain.Exceptions;
+using Identity.Domain.Events;
 using Shared.Application.Interfaces;
 using Shared.Application.Models;
 
@@ -13,335 +12,231 @@ namespace Identity.Application.Services
 {
     public class AuthService : IAuthService
     {
-        private readonly IUserRepository _userRepository;
+        private readonly IUserRepository _userRepo;
+        private readonly IRefreshTokenRepository _refreshTokenRepo;
         private readonly ITokenService _tokenService;
-        private readonly IPasswordService _passwordService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
-        private readonly IMapper _mapper;
-        private readonly IValidator<RegisterUserDto> _registerValidator;
-        private readonly IValidator<LoginDto> _loginValidator;
-        private readonly IValidator<ChangePasswordDto> _changePasswordValidator;
-        private readonly IValidator<UpdateProfileDto> _updateProfileValidator;
+        private readonly IPasswordHasher _passwordHasher;
 
         public AuthService(
-            IUserRepository userRepository,
+            IUserRepository userRepo,
+            IRefreshTokenRepository refreshTokenRepo,
             ITokenService tokenService,
-            IPasswordService passwordService,
             IUnitOfWork unitOfWork,
             IEventBus eventBus,
-            IMapper mapper,
-            IValidator<RegisterUserDto> registerValidator,
-            IValidator<LoginDto> loginValidator,
-            IValidator<ChangePasswordDto> changePasswordValidator,
-            IValidator<UpdateProfileDto> updateProfileValidator)
+            IPasswordHasher passwordHasher)
         {
-            _userRepository = userRepository;
+            _userRepo = userRepo;
+            _refreshTokenRepo = refreshTokenRepo;
             _tokenService = tokenService;
-            _passwordService = passwordService;
             _unitOfWork = unitOfWork;
             _eventBus = eventBus;
-            _mapper = mapper;
-            _registerValidator = registerValidator;
-            _loginValidator = loginValidator;
-            _changePasswordValidator = changePasswordValidator;
-            _updateProfileValidator = updateProfileValidator;
+            _passwordHasher = passwordHasher;
         }
 
-        // ══════════════════════════════════════════════════════
-        // REGISTER
-        // ══════════════════════════════════════════════════════
-        public async Task<Result<AuthResponseDto>> RegisterAsync(
-            RegisterUserDto dto, CancellationToken ct = default)
+        // ── Register ───────────────────────────────────────────
+        public async Task<Result<AuthResultDto>> RegisterAsync(
+            RegisterDto dto, CancellationToken ct = default)
         {
-            // 1. Validate
-            var validation = await _registerValidator.ValidateAsync(dto, ct);
-            if (!validation.IsValid)
-                return Result<AuthResponseDto>.Failure(
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)),
-                    "VALIDATION_FAILED");
+            // 1. Validate role — public registration only allows Buyer/Seller
+            if (!Enum.TryParse<UserRole>(dto.Role, out var role) ||
+                role == UserRole.Admin)
+            {
+                return Result<AuthResultDto>.Failure(
+                    "Invalid role.", "INVALID_ROLE");
+            }
 
             // 2. Check email uniqueness
-            if (await _userRepository.EmailExistsAsync(dto.Email, ct))
-                return Result<AuthResponseDto>.Failure(
-                    $"An account with email '{dto.Email}' already exists.",
-                    "EMAIL_EXISTS");
+            if (await _userRepo.ExistsByEmailAsync(dto.Email, ct))
+                return Result<AuthResultDto>.Failure(
+                    $"Email '{dto.Email}' is already registered.", "EMAIL_EXISTS");
 
-            // 3. Parse role
-            if (!Enum.TryParse<UserRole>(dto.Role, out var role))
-                return Result<AuthResponseDto>.Failure(
-                    $"Invalid role '{dto.Role}'.", "INVALID_ROLE");
+            // 3. Hash password
+            var hash = _passwordHasher.HashPassword(dto.Password);
 
-            // 4. Hash password
-            var passwordHash = _passwordService.HashPassword(dto.Password);
-
-            // 5. Create user via factory
+            // 4. Create user entity
             var user = User.Create(
                 firstName: dto.FirstName,
                 lastName: dto.LastName,
                 email: dto.Email,
-                passwordHash: passwordHash,
+                passwordHash: hash,
                 role: role,
+                createdBy: Guid.Empty, // self-registered
                 phoneNumber: dto.PhoneNumber);
 
-            // 6. Generate tokens
+            await _userRepo.AddAsync(user, ct);
+
+            // 5. Generate tokens
             var accessToken = _tokenService.GenerateAccessToken(user);
-            var refreshTokenString = _tokenService.GenerateRefreshToken();
-            var refreshTokenExpiry = _tokenService.GetRefreshTokenExpiry();
+            var refreshRaw = _tokenService.GenerateRefreshToken();
+            var refreshExpiry = _tokenService.GetRefreshTokenExpiry();
 
-            user.AddRefreshToken(refreshTokenString, refreshTokenExpiry);
+            var refreshToken = RefreshToken.Create(
+                userId: user.Id,
+                token: refreshRaw,
+                expiresAt: refreshExpiry,
+                createdBy: user.Id);
 
-            // 7. Persist
-            await _userRepository.AddAsync(user, ct);
+            await _refreshTokenRepo.AddAsync(refreshToken, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            // 8. Publish domain events
-            await PublishAndClearEventsAsync(user, ct);
+            // 6. Publish domain event
+            await _eventBus.PublishAsync(
+                new UserRegisteredEvent(user.Id, user.Email, role.ToString()), ct);
 
-            // 9. Return auth response
-            return Result<AuthResponseDto>.Success(new AuthResponseDto
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshTokenString,
-                AccessTokenExpiresAt = _tokenService.GetAccessTokenExpiry(),
-                RefreshTokenExpiresAt = refreshTokenExpiry,
-                User = _mapper.Map<UserDto>(user)
-            });
+            return Result<AuthResultDto>.Success(BuildAuthResult(
+                user, accessToken, refreshRaw, refreshExpiry));
         }
 
-        // ══════════════════════════════════════════════════════
-        // LOGIN
-        // ══════════════════════════════════════════════════════
-        public async Task<Result<AuthResponseDto>> LoginAsync(
-            LoginDto dto, CancellationToken ct = default)
+        // ── Login ──────────────────────────────────────────────
+        public async Task<Result<AuthResultDto>> LoginAsync(
+            LoginDto dto, string? ipAddress = null, CancellationToken ct = default)
         {
-            // 1. Validate
-            var validation = await _loginValidator.ValidateAsync(dto, ct);
-            if (!validation.IsValid)
-                return Result<AuthResponseDto>.Failure(
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)),
-                    "VALIDATION_FAILED");
-
-            // 2. Find user by email — include refresh tokens
-            var user = await _userRepository.GetByIdWithTokensAsync(
-                (await _userRepository.GetByEmailAsync(dto.Email, ct))?.Id
-                ?? Guid.Empty, ct);
-
+            // 1. Find user
+            var user = await _userRepo.GetByEmailAsync(dto.Email, ct);
             if (user is null)
-            {
-                // Don't reveal whether email exists — generic message
-                return Result<AuthResponseDto>.Failure(
-                    "Email or password is incorrect.", "INVALID_CREDENTIALS");
-            }
+                return Result<AuthResultDto>.Failure(
+                    "Invalid email or password.", "INVALID_CREDENTIALS");
 
-            // 3. Check account lock
-            if (user.IsLocked)
-                return Result<AuthResponseDto>.Failure(
-                    $"Account is temporarily locked due to multiple failed attempts. " +
-                    $"Please try again later.",
+            // 2. Check lockout
+            if (user.IsLockedOut())
+                return Result<AuthResultDto>.Failure(
+                    "Account is temporarily locked due to too many failed attempts. Try again in 15 minutes.",
                     "ACCOUNT_LOCKED");
 
+            // 3. Check status
+            if (user.Status == Identity.Domain.Enums.UserStatus.Suspended)
+                return Result<AuthResultDto>.Failure(
+                    "Your account has been suspended. Contact support.",
+                    "ACCOUNT_SUSPENDED");
 
-            string hashPass = _passwordService.HashPassword(dto.Password);
+            if (user.Status == Identity.Domain.Enums.UserStatus.Inactive)
+                return Result<AuthResultDto>.Failure(
+                    "Your account is inactive.", "ACCOUNT_INACTIVE");
+
             // 4. Verify password
-            if (!_passwordService.VerifyPassword(dto.Password, user.PasswordHash))
+            if (!_passwordHasher.VerifyPassword(dto.Password, user.PasswordHash))
             {
                 user.RecordFailedLogin();
-                _userRepository.Update(user);
+                _userRepo.Update(user);
                 await _unitOfWork.SaveChangesAsync(ct);
-                return Result<AuthResponseDto>.Failure(
-                    "Email or password is incorrect.", "INVALID_CREDENTIALS");
+
+                return Result<AuthResultDto>.Failure(
+                    "Invalid email or password.", "INVALID_CREDENTIALS");
             }
 
-            // 5. Record successful login
-            try
-            {
-                user.RecordLogin();
-            }
-            catch (IdentityException ex)
-            {
-                return Result<AuthResponseDto>.Failure(ex.Message, ex.Code);
-            }
+            // 5. Record success
+            user.RecordSuccessfulLogin();
+            _userRepo.Update(user);
 
-            // 6. Generate tokens
+            // 6. Revoke all old refresh tokens for this user (rotation)
+            await _refreshTokenRepo.RevokeAllForUserAsync(
+                user.Id, "New login", ct);
+
+            // 7. Generate new tokens
             var accessToken = _tokenService.GenerateAccessToken(user);
-            var refreshTokenString = _tokenService.GenerateRefreshToken();
-            var refreshTokenExpiry = _tokenService.GetRefreshTokenExpiry();
+            var refreshRaw = _tokenService.GenerateRefreshToken();
+            var refreshExpiry = _tokenService.GetRefreshTokenExpiry();
 
-            user.AddRefreshToken(
-                refreshTokenString,
-                refreshTokenExpiry,
-                dto.IpAddress);
+            var refreshToken = RefreshToken.Create(
+                userId: user.Id,
+                token: refreshRaw,
+                expiresAt: refreshExpiry,
+                createdBy: user.Id,
+                createdByIp: ipAddress);
 
-            // 7. Persist
-            _userRepository.Update(user);
+            await _refreshTokenRepo.AddAsync(refreshToken, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            // 8. Publish domain events
-            await PublishAndClearEventsAsync(user, ct);
+            return Result<AuthResultDto>.Success(BuildAuthResult(
+                user, accessToken, refreshRaw, refreshExpiry));
+        }
 
-            return Result<AuthResponseDto>.Success(new AuthResponseDto
+        // ── Refresh ────────────────────────────────────────────
+        public async Task<Result<AuthResultDto>> RefreshTokenAsync(
+            string refreshToken, string? ipAddress = null, CancellationToken ct = default)
+        {
+            var token = await _refreshTokenRepo.GetByTokenAsync(refreshToken, ct);
+
+            if (token is null || !token.IsActive())
+                return Result<AuthResultDto>.Failure(
+                    "Invalid or expired refresh token.", "INVALID_REFRESH_TOKEN");
+
+            var user = await _userRepo.GetByIdAsync(token.UserId, ct);
+            if (user is null || user.IsDeleted)
+                return Result<AuthResultDto>.Failure(
+                    "User not found.", "USER_NOT_FOUND");
+
+            // Rotate: revoke old token, issue new one
+            var newRefreshRaw = _tokenService.GenerateRefreshToken();
+            var newRefreshExpiry = _tokenService.GetRefreshTokenExpiry();
+
+            token.Revoke("Replaced by refresh", newRefreshRaw);
+            _refreshTokenRepo.Update(token);
+
+            var newRefreshToken = RefreshToken.Create(
+                userId: user.Id,
+                token: newRefreshRaw,
+                expiresAt: newRefreshExpiry,
+                createdBy: user.Id,
+                createdByIp: ipAddress);
+
+            await _refreshTokenRepo.AddAsync(newRefreshToken, ct);
+
+            var newAccessToken = _tokenService.GenerateAccessToken(user);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return Result<AuthResultDto>.Success(BuildAuthResult(
+                user, newAccessToken, newRefreshRaw, newRefreshExpiry));
+        }
+
+        // ── Revoke ─────────────────────────────────────────────
+        public async Task<Result> RevokeTokenAsync(
+            string refreshToken, Guid userId, CancellationToken ct = default)
+        {
+            var token = await _refreshTokenRepo.GetByTokenAsync(refreshToken, ct);
+
+            if (token is null || token.UserId != userId)
+                return Result.Failure("Token not found.", "INVALID_REFRESH_TOKEN");
+
+            if (!token.IsActive())
+                return Result.Failure(
+                    "Token is already revoked or expired.", "INVALID_REFRESH_TOKEN");
+
+            token.Revoke("Logged out by user");
+            _refreshTokenRepo.Update(token);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return Result.Success();
+        }
+
+        // ── Helper ─────────────────────────────────────────────
+        private AuthResultDto BuildAuthResult(
+            User user, string accessToken,
+            string refreshRaw, DateTime refreshExpiry)
+        {
+            return new AuthResultDto
             {
                 AccessToken = accessToken,
-                RefreshToken = refreshTokenString,
+                RefreshToken = refreshRaw,
                 AccessTokenExpiresAt = _tokenService.GetAccessTokenExpiry(),
-                RefreshTokenExpiresAt = refreshTokenExpiry,
-                User = _mapper.Map<UserDto>(user)
-            });
-        }
-
-        // ══════════════════════════════════════════════════════
-        // REFRESH TOKEN
-        // ══════════════════════════════════════════════════════
-        public async Task<Result<AuthResponseDto>> RefreshTokenAsync(
-            RefreshTokenDto dto, CancellationToken ct = default)
-        {
-            // 1. Find user by refresh token
-            var user = await _userRepository.GetByRefreshTokenAsync(dto.RefreshToken, ct);
-            if (user is null)
-                return Result<AuthResponseDto>.Failure(
-                    "Invalid refresh token.", "INVALID_REFRESH_TOKEN");
-
-            // 2. Get the specific token
-            var refreshToken = user.GetActiveRefreshToken(dto.RefreshToken);
-            if (refreshToken is null)
-                return Result<AuthResponseDto>.Failure(
-                    "Refresh token is expired or revoked.", "INVALID_REFRESH_TOKEN");
-
-            // 3. Generate new tokens
-            var newAccessToken = _tokenService.GenerateAccessToken(user);
-            var newRefreshTokenString = _tokenService.GenerateRefreshToken();
-            var newRefreshTokenExpiry = _tokenService.GetRefreshTokenExpiry();
-
-            // 4. Revoke old, add new
-            refreshToken.Revoke("Replaced by new token.", newRefreshTokenString);
-            user.AddRefreshToken(
-                newRefreshTokenString,
-                newRefreshTokenExpiry,
-                dto.IpAddress);
-
-            // 5. Persist
-            _userRepository.Update(user);
-            await _unitOfWork.SaveChangesAsync(ct);
-
-            return Result<AuthResponseDto>.Success(new AuthResponseDto
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshTokenString,
-                AccessTokenExpiresAt = _tokenService.GetAccessTokenExpiry(),
-                RefreshTokenExpiresAt = newRefreshTokenExpiry,
-                User = _mapper.Map<UserDto>(user)
-            });
-        }
-
-        // ══════════════════════════════════════════════════════
-        // REVOKE TOKEN
-        // ══════════════════════════════════════════════════════
-        public async Task<Result> RevokeTokenAsync(
-            string refreshToken, CancellationToken ct = default)
-        {
-            var user = await _userRepository.GetByRefreshTokenAsync(refreshToken, ct);
-            if (user is null)
-                return Result.Failure("Invalid refresh token.", "INVALID_REFRESH_TOKEN");
-
-            user.RevokeRefreshToken(refreshToken, "Revoked by user.");
-            _userRepository.Update(user);
-            await _unitOfWork.SaveChangesAsync(ct);
-
-            return Result.Success();
-        }
-
-        // ══════════════════════════════════════════════════════
-        // GET CURRENT USER
-        // ══════════════════════════════════════════════════════
-        public async Task<Result<UserDto>> GetCurrentUserAsync(
-            Guid userId, CancellationToken ct = default)
-        {
-            var user = await _userRepository.GetByIdAsync(userId, ct);
-            if (user is null || user.IsDeleted)
-                return Result<UserDto>.Failure(
-                    $"User {userId} not found.", "USER_NOT_FOUND");
-
-            return Result<UserDto>.Success(_mapper.Map<UserDto>(user));
-        }
-
-        // ══════════════════════════════════════════════════════
-        // UPDATE PROFILE
-        // ══════════════════════════════════════════════════════
-        public async Task<Result<UserDto>> UpdateProfileAsync(
-            Guid userId, UpdateProfileDto dto, CancellationToken ct = default)
-        {
-            // 1. Validate
-            var validation = await _updateProfileValidator.ValidateAsync(dto, ct);
-            if (!validation.IsValid)
-                return Result<UserDto>.Failure(
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)),
-                    "VALIDATION_FAILED");
-
-            // 2. Find user
-            var user = await _userRepository.GetByIdAsync(userId, ct);
-            if (user is null || user.IsDeleted)
-                return Result<UserDto>.Failure(
-                    $"User {userId} not found.", "USER_NOT_FOUND");
-
-            // 3. Update via domain method
-            user.UpdateProfile(
-                dto.FirstName,
-                dto.LastName,
-                dto.PhoneNumber,
-                dto.AvatarUrl,
-                userId);
-
-            _userRepository.Update(user);
-            await _unitOfWork.SaveChangesAsync(ct);
-
-            return Result<UserDto>.Success(_mapper.Map<UserDto>(user));
-        }
-
-        // ══════════════════════════════════════════════════════
-        // CHANGE PASSWORD
-        // ══════════════════════════════════════════════════════
-        public async Task<Result> ChangePasswordAsync(
-            Guid userId, ChangePasswordDto dto, CancellationToken ct = default)
-        {
-            // 1. Validate
-            var validation = await _changePasswordValidator.ValidateAsync(dto, ct);
-            if (!validation.IsValid)
-                return Result.Failure(
-                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)),
-                    "VALIDATION_FAILED");
-
-            // 2. Find user
-            var user = await _userRepository.GetByIdAsync(userId, ct);
-            if (user is null || user.IsDeleted)
-                return Result.Failure($"User {userId} not found.", "USER_NOT_FOUND");
-
-            // 3. Verify current password
-            if (!_passwordService.VerifyPassword(dto.CurrentPassword, user.PasswordHash))
-                return Result.Failure(
-                    "Current password is incorrect.", "INVALID_CURRENT_PASSWORD");
-
-            // 4. Hash new password and update
-            var newPasswordHash = _passwordService.HashPassword(dto.NewPassword);
-            user.ChangePassword(newPasswordHash, userId);
-
-            _userRepository.Update(user);
-            await _unitOfWork.SaveChangesAsync(ct);
-
-            return Result.Success();
-        }
-
-        // ══════════════════════════════════════════════════════
-        // PRIVATE HELPERS
-        // ══════════════════════════════════════════════════════
-        private async Task PublishAndClearEventsAsync(
-            User user, CancellationToken ct)
-        {
-            foreach (var domainEvent in user.DomainEvents)
-                await _eventBus.PublishAsync(domainEvent, ct);
-
-            user.ClearDomainEvents();
+                RefreshTokenExpiresAt = refreshExpiry,
+                User = new UserDto
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    AvatarUrl = user.AvatarUrl,
+                    Role = user.Role.ToString(),
+                    Status = user.Status.ToString(),
+                    LastLoginAt = user.LastLoginAt,
+                    CreatedAt = user.CreatedAt
+                }
+            };
         }
     }
-
 }

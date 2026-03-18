@@ -1,8 +1,8 @@
-﻿using Identity.Application.Interfaces;
+﻿using Identity.Application.Services.Interfaces;
 
 namespace Identity.Infrastructure.Services
 {
-    public class PasswordService : IPasswordService
+    public class PasswordService : IPasswordHasher
     {
         public string HashPassword(string password)
             => BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);

@@ -1,3 +1,4 @@
+using AdminPanel.Dtos;
 using AdminPanel.Dtos.Products;
 using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
@@ -8,412 +9,82 @@ using Microsoft.AspNetCore.Mvc;
 namespace AdminPanel.Controllers
 {
     [Authorize(Policy = "AdminOnly")]
+    [Route("products")]
     public class ProductsController : Controller
     {
         private readonly IApiClient _api;
-        private readonly AuthTokenService _tokens;
+        private readonly AuthTokenService _tokenService;
 
-        public ProductsController(IApiClient api, AuthTokenService tokens)
+        public ProductsController(IApiClient api, AuthTokenService tokenService)
         {
             _api = api;
-            _tokens = tokens;
+            _tokenService = tokenService;
         }
 
-        // ══════════════════════════════════════════════════════════
-        // ADMIN PRODUCT LIST
-        // GET /Products
-        // ══════════════════════════════════════════════════════════
-
+        // GET /products
+        [HttpGet("")]
         public async Task<IActionResult> Index(
-            string? search,
-            string? status,
-            int? categoryId,
-            int? brandId,
-            string? creatorType,
-            string sortBy = "createdat",
-            string sortDirection = "desc",
-            int page = 1,
+            string? search, string? status,
+            int? categoryId, int page = 1,
             CancellationToken ct = default)
         {
-            var token = _tokens.GetAccessToken() ?? "";
+            var token = _tokenService.GetAccessToken() ?? "";
+            var result = await _api.GetProductsAsync(
+                token, page, 20, search, status, categoryId);
 
-            var productsTask = _api.GetProductsAsync(
-                token, page, 20, search, status, categoryId,
-                brandId, creatorType, sortBy, sortDirection);
-            var categoriesTask = _api.GetCategoriesAsync(token);
-            var brandsTask = _api.GetBrandsAsync(token);
-
-            await Task.WhenAll(productsTask, categoriesTask, brandsTask);
-
-            var result = await productsTask;
             var vm = new ProductListViewModel
             {
-                Items = result?.Data?.Items.Select(MapToListItem).ToList() ?? [],
-                Page = result?.Data?.Page ?? page,
+                Items = result?.Data?.Items.Select(p => new ProductListItem
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Sku = p.Sku ?? "-",
+                    CategoryName = p.CategoryName,
+                    BasePrice = p.BasePrice,
+                    CurrencyCode = p.CurrencyCode,
+                    Status = p.Status,
+                    SellerName = p.SellerName,
+                    PrimaryImageUrl = p.PrimaryImageUrl,
+                    CreatedAt = p.CreatedAt
+                }).ToList() ?? [],
+                Page = result?.Data?.Page ?? 1,
                 PageSize = result?.Data?.PageSize ?? 20,
                 TotalCount = result?.Data?.TotalCount ?? 0,
                 Search = search,
                 Status = status,
-                CategoryId = categoryId,
-                BrandId = brandId,
-                CreatorType = creatorType,
-                SortBy = sortBy,
-                SortDirection = sortDirection,
-                Categories = (await categoriesTask)?.Data?
-                    .Select(c => new SelectItem { Id = c.Id, Name = c.Name })
-                    .ToList() ?? [],
-                Brands = (await brandsTask)?.Data?
-                    .Select(b => new SelectItem { Id = b.Id, Name = b.Name })
-                    .ToList() ?? []
+                CategoryId = categoryId
             };
 
             return View(vm);
         }
 
-        // ══════════════════════════════════════════════════════════
-        // SELLER PRODUCT LIST
-        // GET /Products/Seller
-        // ══════════════════════════════════════════════════════════
-
-        [HttpGet]
-        public async Task<IActionResult> Seller(
-            string? search,
-            string? status,
-            int? categoryId,
-            string sortBy = "createdat",
-            string sortDirection = "desc",
-            int page = 1,
-            CancellationToken ct = default)
+        // GET /products/create
+        [HttpGet("create")]
+        public async Task<IActionResult> Create(CancellationToken ct)
         {
-            var token = _tokens.GetAccessToken() ?? "";
-
-            var productsTask = _api.GetSellerProductsAsync(
-                token, page, 20, search, status, categoryId,
-                sortBy, sortDirection);
-            var categoriesTask = _api.GetCategoriesAsync(token);
-
-            await Task.WhenAll(productsTask, categoriesTask);
-
-            var result = await productsTask;
-            var vm = new SellerProductListViewModel
-            {
-                Items = result?.Data?.Items.Select(MapToListItem).ToList() ?? [],
-                Page = result?.Data?.Page ?? page,
-                PageSize = result?.Data?.PageSize ?? 20,
-                TotalCount = result?.Data?.TotalCount ?? 0,
-                Search = search,
-                Status = status,
-                CategoryId = categoryId,
-                SortBy = sortBy,
-                SortDirection = sortDirection,
-                Categories = (await categoriesTask)?.Data?
-                    .Select(c => new SelectItem { Id = c.Id, Name = c.Name })
-                    .ToList() ?? []
-            };
-
-            return View(vm);
+            var vm = new CreateProductViewModel { IsAdminMode = true };
+            await PopulateDropdowns(vm);
+            return View("Form", vm);
         }
 
-        // ══════════════════════════════════════════════════════════
-        // ADMIN PRODUCT DETAIL
-        // GET /Products/{id}
-        // ══════════════════════════════════════════════════════════
-
-        [HttpGet("{id:guid}", Name = "ProductDetail")]
-        [Route("Products/{id:guid}")]
-        public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
+        // GET /products/{id}/edit
+        [HttpGet("{id:guid}/edit")]
+        public async Task<IActionResult> Edit(Guid id, CancellationToken ct)
         {
-            var token = _tokens.GetAccessToken() ?? "";
+            var token = _tokenService.GetAccessToken() ?? "";
             var result = await _api.GetProductByIdAsync(token, id);
 
-            if (result?.Data is null)
+            if (result?.Success != true || result.Data is null)
             {
                 TempData["Error"] = "Product not found.";
                 return RedirectToAction(nameof(Index));
             }
 
             var p = result.Data;
-            var vm = MapToDetailVm(p, isAdmin: true);
-            return View(vm);
-        }
-
-        // ══════════════════════════════════════════════════════════
-        // SELLER PRODUCT DETAIL
-        // GET /Products/SellerDetail/{id}
-        // ══════════════════════════════════════════════════════════
-
-        [HttpGet]
-        [Route("Products/SellerDetail/{id:guid}")]
-        public async Task<IActionResult> SellerDetail(Guid id, CancellationToken ct)
-        {
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetSellerProductByIdAsync(token, id);
-
-            if (result?.Data is null)
-            {
-                TempData["Error"] = "Product not found.";
-                return RedirectToAction(nameof(Seller));
-            }
-
-            var vm = MapToDetailVm(result.Data, isAdmin: false);
-            return View("Detail", vm);  // reuse same view
-        }
-
-        // ══════════════════════════════════════════════════════════
-        // CREATE
-        // GET  /Products/Create
-        // POST /Products/Create
-        // ══════════════════════════════════════════════════════════
-
-        [HttpGet]
-        public async Task<IActionResult> Create(CancellationToken ct)
-        {
-            var token = _tokens.GetAccessToken() ?? "";
-            var vm = new ProductFormViewModel { IsAdminMode = true };
-            await PopulateFormDropdowns(vm, token);
-            return View("Form", vm);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(
-            ProductFormViewModel vm, CancellationToken ct)
-        {
-            if (!ModelState.IsValid)
-            {
-                var token2 = _tokens.GetAccessToken() ?? "";
-                await PopulateFormDropdowns(vm, token2);
-                return View("Form", vm);
-            }
-
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.CreateProductAsync(token, BuildCreateRequest(vm));
-
-            if (result?.Success != true)
-            {
-                ModelState.AddModelError("", result?.Error ?? "Failed to create product.");
-                await PopulateFormDropdowns(vm, token);
-                return View("Form", vm);
-            }
-
-            TempData["Success"] = $"Product '{vm.Name}' created successfully.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        // ══════════════════════════════════════════════════════════
-        // EDIT
-        // GET  /Products/{id}/Edit
-        // POST /Products/{id}/Edit
-        // ══════════════════════════════════════════════════════════
-
-        [HttpGet]
-        [Route("Products/{id:guid}/Edit")]
-        public async Task<IActionResult> Edit(Guid id, CancellationToken ct)
-        {
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetProductByIdAsync(token, id);
-
-            if (result?.Data is null)
-            {
-                TempData["Error"] = "Product not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            var vm = MapToFormVm(result.Data, isAdmin: true);
-            await PopulateFormDropdowns(vm, token);
-            return View("Form", vm);
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Route("Products/{id:guid}/Edit")]
-        public async Task<IActionResult> Edit(
-            Guid id, ProductFormViewModel vm, CancellationToken ct)
-        {
-            if (!ModelState.IsValid)
-            {
-                var token2 = _tokens.GetAccessToken() ?? "";
-                await PopulateFormDropdowns(vm, token2);
-                return View("Form", vm);
-            }
-
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.UpdateProductAsync(token, id, BuildUpdateRequest(vm));
-
-            if (result?.Success != true)
-            {
-                ModelState.AddModelError("", result?.Error ?? "Failed to update product.");
-                await PopulateFormDropdowns(vm, token);
-                return View("Form", vm);
-            }
-
-            TempData["Success"] = $"Product '{vm.Name}' updated successfully.";
-            return RedirectToAction(nameof(Detail), new { id });
-        }
-
-        // ══════════════════════════════════════════════════════════
-        // DELETE
-        // POST /Products/{id}/Delete
-        // ══════════════════════════════════════════════════════════
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Route("Products/{id:guid}/Delete")]
-        public async Task<IActionResult> Delete(
-            Guid id, string? returnUrl, CancellationToken ct)
-        {
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.DeleteProductAsync(token, id);
-
-            TempData[result?.Success == true ? "Success" : "Error"] =
-                result?.Success == true
-                    ? "Product deleted."
-                    : result?.Error ?? "Failed to delete product.";
-
-            return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
-                ? Redirect(returnUrl)
-                : RedirectToAction(nameof(Index));
-        }
-
-        // ══════════════════════════════════════════════════════════
-        // APPROVAL FLOW (Admin-only actions)
-        // ══════════════════════════════════════════════════════════
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Route("Products/{id:guid}/Approve")]
-        public async Task<IActionResult> Approve(
-            Guid id, string? returnUrl, CancellationToken ct)
-        {
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.ApproveProductAsync(token, id);
-
-            TempData[result?.Success == true ? "Success" : "Error"] =
-                result?.Success == true
-                    ? "Product approved and is now live."
-                    : result?.Error ?? "Failed to approve product.";
-
-            return RedirectBack(returnUrl, nameof(Index));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Route("Products/{id:guid}/Reject")]
-        public async Task<IActionResult> Reject(
-            Guid id, string reason, string? returnUrl, CancellationToken ct)
-        {
-            if (string.IsNullOrWhiteSpace(reason))
-            {
-                TempData["Error"] = "A rejection reason is required.";
-                return RedirectBack(returnUrl, nameof(Index));
-            }
-
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.RejectProductAsync(token, id, reason);
-
-            TempData[result?.Success == true ? "Success" : "Error"] =
-                result?.Success == true
-                    ? "Product rejected."
-                    : result?.Error ?? "Failed to reject product.";
-
-            return RedirectBack(returnUrl, nameof(Index));
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [Route("Products/{id:guid}/Archive")]
-        public async Task<IActionResult> Archive(
-            Guid id, string? returnUrl, CancellationToken ct)
-        {
-            var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.ArchiveProductAsync(token, id);
-
-            TempData[result?.Success == true ? "Success" : "Error"] =
-                result?.Success == true
-                    ? "Product archived."
-                    : result?.Error ?? "Failed to archive product.";
-
-            return RedirectBack(returnUrl, nameof(Index));
-        }
-
-        // ══════════════════════════════════════════════════════════
-        // PRIVATE HELPERS
-        // ══════════════════════════════════════════════════════════
-
-        private static ProductListItem MapToListItem(ProductDto p) => new()
-        {
-            Id = p.Id,
-            Name = p.Name,
-            Sku = p.Sku ?? "-",
-            CategoryName = p.CategoryName ?? "-",
-            BrandName = p.BrandName,
-            BasePrice = p.BasePrice,
-            CurrencyCode = p.CurrencyCode,
-            Status = p.Status,
-            IsActive = p.IsActive,
-            IsFeatured = p.IsFeatured,
-            SellerName = p.SellerName,
-            PrimaryImageUrl = p.PrimaryImageUrl,
-            VariantCount = p.Variants?.Count ?? 0,
-            CreatedAt = p.CreatedAt
-        };
-
-        private static ProductDetailViewModel MapToDetailVm(
-            ProductDto p, bool isAdmin)
-        {
-            var isPending = p.Status == "PendingApproval";
-            var isActive = p.Status == "Active";
-            var isDeleted = p.Status == "Deleted";
-
-            return new ProductDetailViewModel
+            var vm = new CreateProductViewModel
             {
                 Id = p.Id,
-                Name = p.Name,
-                Slug = p.Slug,
-                Sku = p.Sku,
-                ShortDescription = p.ShortDescription,
-                Description = p.Description,
-                BasePrice = p.BasePrice,
-                CurrencyCode = p.CurrencyCode,
-                Status = p.Status,
-                IsActive = p.IsActive,
-                IsFeatured = p.IsFeatured,
-                CategoryName = p.CategoryName ?? "-",
-                BrandName = p.BrandName,
-                SellerName = p.SellerName,
-                PrimaryImageUrl = p.PrimaryImageUrl,
-                CreatedAt = p.CreatedAt,
-                Images = p.Images.Select(i => new ProductImageItem
-                {
-                    Id = i.Id,
-                    ImageUrl = i.ImageUrl,
-                    AltText = i.AltText,
-                    IsPrimary = i.IsPrimary,
-                    SortOrder = i.SortOrder
-                }).ToList(),
-                Variants = p.Variants.Select(v => new ProductVariantItem
-                {
-                    Id = v.Id,
-                    Name = v.Name,
-                    Price = v.Price,
-                    Sku = v.Sku,
-                    StockQuantity = v.StockQuantity
-                }).ToList(),
-
-                // Action availability
-                CanApprove = isAdmin && isPending,
-                CanReject = isAdmin && isPending,
-                CanArchive = isAdmin && isActive,
-                CanDelete = isAdmin && !isDeleted,
-                CanEdit = !isDeleted
-            };
-        }
-
-        private static ProductFormViewModel MapToFormVm(ProductDto p, bool isAdmin)
-            => new()
-            {
-                Id = p.Id,
-                IsAdminMode = isAdmin,
+                IsAdminMode = true,
                 Name = p.Name,
                 Slug = p.Slug,
                 ShortDescription = p.ShortDescription,
@@ -422,108 +93,304 @@ namespace AdminPanel.Controllers
                 BrandId = p.BrandId,
                 BasePrice = p.BasePrice,
                 CurrencyCode = p.CurrencyCode,
+                CompareAtPrice = p.CompareAtPrice,
                 Sku = p.Sku,
+                Barcode = p.Barcode,
+                IsDigital = p.IsDigital,
+                WeightKg = p.WeightKg,
                 IsFeatured = p.IsFeatured,
-                Status = p.Status
-            };
-
-        private static CreateProductRequest BuildCreateRequest(
-            ProductFormViewModel vm) => new()
-            {
-                CategoryId = vm.CategoryId,
-                BrandId = vm.BrandId,
-                Name = vm.Name,
-                Slug = vm.Slug,
-                ShortDescription = vm.ShortDescription,
-                Description = vm.Description,
-                BasePrice = vm.BasePrice,
-                CurrencyCode = vm.CurrencyCode,
-                CompareAtPrice = vm.CompareAtPrice,
-                CostPrice = vm.CostPrice,
-                Sku = vm.Sku,
-                Barcode = vm.Barcode,
-                WeightKg = vm.WeightKg,
-                LengthCm = vm.LengthCm,
-                WidthCm = vm.WidthCm,
-                HeightCm = vm.HeightCm,
-                IsDigital = vm.IsDigital,
-                Seo = vm.MetaTitle is not null ? new ProductSeoRequest
+                Status = p.Status,
+                RejectionReason = p.RejectionReason,
+                SelectedTagIds = p.Tags.Select(t => t.Id).ToList(),
+                MetaTitle = p.Seo?.MetaTitle,
+                MetaDescription = p.Seo?.MetaDescription,
+                MetaKeywords = p.Seo?.MetaKeywords,
+                CanonicalUrl = p.Seo?.CanonicalUrl,
+                OgTitle = p.Seo?.OgTitle,
+                OgDescription = p.Seo?.OgDescription,
+                OgImageUrl = p.Seo?.OgImageUrl,
+                ExistingImages = p.Images.Select(i => new ExistingImageItem
                 {
-                    MetaTitle = vm.MetaTitle,
-                    MetaDescription = vm.MetaDescription,
-                    MetaKeywords = vm.MetaKeywords,
-                    CanonicalUrl = vm.CanonicalUrl,
-                    OgTitle = vm.OgTitle,
-                    OgDescription = vm.OgDescription,
-                    OgImageUrl = vm.OgImageUrl
-                } : null,
-                TagIds = vm.TagIds ?? [],
-                ImageUrls = []
-            };
-
-        private static UpdateProductRequest BuildUpdateRequest(
-            ProductFormViewModel vm) => new()
-            {
-                CategoryId = vm.CategoryId,
-                BrandId = vm.BrandId,
-                Name = vm.Name,
-                Slug = vm.Slug,
-                ShortDescription = vm.ShortDescription,
-                Description = vm.Description,
-                BasePrice = vm.BasePrice,
-                CurrencyCode = vm.CurrencyCode,
-                CompareAtPrice = vm.CompareAtPrice,
-                CostPrice = vm.CostPrice,
-                Sku = vm.Sku,
-                Barcode = vm.Barcode,
-                WeightKg = vm.WeightKg,
-                LengthCm = vm.LengthCm,
-                WidthCm = vm.WidthCm,
-                HeightCm = vm.HeightCm,
-                IsDigital = vm.IsDigital,
-                Seo = vm.MetaTitle is not null ? new ProductSeoRequest
+                    Id = i.Id,
+                    Url = i.ImageUrl,
+                    IsPrimary = i.IsPrimary
+                }).ToList(),
+                Variants = p.Variants.Select(v => new ExistingVariantItem
                 {
-                    MetaTitle = vm.MetaTitle,
-                    MetaDescription = vm.MetaDescription,
-                    MetaKeywords = vm.MetaKeywords,
-                    CanonicalUrl = vm.CanonicalUrl,
-                    OgTitle = vm.OgTitle,
-                    OgDescription = vm.OgDescription,
-                    OgImageUrl = vm.OgImageUrl
-                } : null,
-                TagIds = vm.TagIds ?? []
+                    Id = v.Id,
+                    Name = v.Name,
+                    Price = v.Price,
+                    CurrencyCode = v.CurrencyCode,
+                    CompareAtPrice = v.CompareAtPrice,
+                    CostPrice = null,
+                    Sku = v.Sku,
+                    Barcode = v.Barcode,
+                    IsActive = v.IsActive,
+                    Attributes = v.Attributes.Select(a => new ExistingAttributeItem
+                    {
+                        Name = a.Name,
+                        Value = a.Value,
+                        SortOrder = a.SortOrder
+                    }).ToList()
+                }).ToList()
             };
 
-        private async Task PopulateFormDropdowns(
-            ProductFormViewModel vm, string token)
+            await PopulateDropdowns(vm);
+            return View("Form", vm);
+        }
+
+        // GET /products/{id}
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
         {
-            var catTask = _api.GetCategoriesAsync(token);
-            var brandTask = _api.GetBrandsAsync(token);
-            var tagTask = _api.GetTagsAsync(token);
+            var token = _tokenService.GetAccessToken() ?? "";
+            var result = await _api.GetProductByIdAsync(token, id);
 
-            await Task.WhenAll(catTask, brandTask, tagTask);
+            if (result?.Success != true || result.Data is null)
+            {
+                TempData["Error"] = "Product not found.";
+                return RedirectToAction(nameof(Index));
+            }
 
-            vm.Categories = (await catTask)?.Data?
-                .Select(c => new SelectItem { Id = c.Id, Name = c.Name })
-                .ToList() ?? [];
-            vm.Brands = (await brandTask)?.Data?
-                .Select(b => new SelectItem { Id = b.Id, Name = b.Name })
-                .ToList() ?? [];
-            vm.AvailableTags = (await tagTask)?.Data?
-                .Select(t => new TagSelectItem
+            var p = result.Data;
+            var vm = new ProductDetailViewModel
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Slug = p.Slug,
+                ShortDescription = p.ShortDescription,
+                Description = p.Description,
+                CategoryName = p.CategoryName,
+                BrandName = p.BrandName,
+                BasePrice = p.BasePrice,
+                CurrencyCode = p.CurrencyCode,
+                CompareAtPrice = p.CompareAtPrice,
+                Sku = p.Sku,
+                Barcode = p.Barcode,
+                WeightKg = p.WeightKg,
+                IsDigital = p.IsDigital,
+                IsActive = p.IsActive,
+                IsFeatured = p.IsFeatured,
+                Status = p.Status,
+                RejectionReason = p.RejectionReason,
+               // CreatorType = p.CreatorType,
+                SellerId = p.SellerId,
+                SellerName = p.SellerName,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt,
+                MetaTitle = p.Seo?.MetaTitle,
+                MetaDescription = p.Seo?.MetaDescription,
+                MetaKeywords = p.Seo?.MetaKeywords,
+                CanonicalUrl = p.Seo?.CanonicalUrl,
+                OgTitle = p.Seo?.OgTitle,
+                OgDescription = p.Seo?.OgDescription,
+                OgImageUrl = p.Seo?.OgImageUrl,
+                Images = p.Images.Select(i => new ProductDetailImageItem
+                {
+                    Id = i.Id,
+                    ImageUrl = i.ImageUrl,
+                    AltText = i.AltText,
+                    IsPrimary = i.IsPrimary,
+                    SortOrder = i.SortOrder
+                }).ToList(),
+                Variants = p.Variants.Select(v => new ProductDetailVariantItem
+                {
+                    Id = v.Id,
+                    Name = v.Name,
+                    Sku = v.Sku,
+                    Price = v.Price,
+                    CurrencyCode = v.CurrencyCode,
+                    CompareAtPrice = v.CompareAtPrice,
+                    IsActive = v.IsActive,
+                    Attributes = v.Attributes.Select(a => new ProductDetailAttributeItem
+                    {
+                        Name = a.Name,
+                        Value = a.Value
+                    }).ToList()
+                }).ToList(),
+                Tags = p.Tags.Select(t => new ProductDetailTagItem
                 {
                     Id = t.Id,
                     Name = t.Name,
-                    Selected = vm.TagIds.Contains(t.Id)
-                })
-                .ToList() ?? [];
+                    Slug = t.Slug
+                }).ToList()
+            };
+
+            return View(vm);
         }
 
-        private IActionResult RedirectBack(string? returnUrl, string fallbackAction)
+        // POST /products/save
+        [HttpPost("save")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Save(
+            CreateProductViewModel vm, CancellationToken ct)
         {
-            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-                return Redirect(returnUrl);
-            return RedirectToAction(fallbackAction);
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdowns(vm);
+                return View("Form", vm);
+            }
+
+            var token = _tokenService.GetAccessToken() ?? "";
+            var seo = BuildSeoRequest(vm);
+
+            if (vm.IsEditMode)
+            {
+                var result = await _api.UpdateProductAsync(
+                    token, vm.Id!.Value, new UpdateProductRequest
+                    {
+                        Name = vm.Name,
+                        Slug = vm.Slug,
+                        ShortDescription = vm.ShortDescription,
+                        Description = vm.Description,
+                        CategoryId = vm.CategoryId,
+                        BrandId = vm.BrandId,
+                        BasePrice = vm.BasePrice,
+                        CurrencyCode = vm.CurrencyCode,
+                        CompareAtPrice = vm.CompareAtPrice,
+                        Sku = vm.Sku,
+                        Barcode = vm.Barcode,
+                        IsDigital = vm.IsDigital,
+                        WeightKg = vm.WeightKg,
+                        TagIds = vm.SelectedTagIds,
+                        Seo = seo
+                    });
+
+                if (result?.Success != true)
+                {
+                    ModelState.AddModelError("", result?.Error ?? "Failed to update product.");
+                    await PopulateDropdowns(vm);
+                    return View("Form", vm);
+                }
+
+                TempData["Success"] = $"Product '{vm.Name}' updated successfully.";
+                return RedirectToAction(nameof(Detail), new { id = vm.Id });
+            }
+            else
+            {
+                var result = await _api.CreateProductAsync(
+                    token, new CreateProductRequest
+                    {
+                        Name = vm.Name,
+                        Slug = vm.Slug,
+                        ShortDescription = vm.ShortDescription,
+                        Description = vm.Description,
+                        CategoryId = vm.CategoryId,
+                        BrandId = vm.BrandId,
+                        BasePrice = vm.BasePrice,
+                        CurrencyCode = vm.CurrencyCode,
+                        CompareAtPrice = vm.CompareAtPrice,
+                        Sku = vm.Sku,
+                        IsDigital = vm.IsDigital,
+                        TagIds = vm.SelectedTagIds,
+                        Seo = seo
+                    });
+
+                if (result?.Success != true)
+                {
+                    ModelState.AddModelError("", result?.Error ?? "Failed to create product.");
+                    await PopulateDropdowns(vm);
+                    return View("Form", vm);
+                }
+
+                TempData["Success"] = $"Product '{vm.Name}' created successfully.";
+                return RedirectToAction(nameof(Index));
+            }
         }
+
+        // POST /products/{id}/approve
+        [HttpPost("{id:guid}/approve")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Approve(Guid id, CancellationToken ct)
+        {
+            var token = _tokenService.GetAccessToken() ?? "";
+            var result = await _api.ApproveProductAsync(token, id);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
+                    ? "Product approved successfully."
+                    : result?.Error ?? "Failed to approve product.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST /products/{id}/reject
+        [HttpPost("{id:guid}/reject")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Reject(
+            Guid id, string reason, CancellationToken ct)
+        {
+            var token = _tokenService.GetAccessToken() ?? "";
+            var result = await _api.RejectProductAsync(token, id, reason);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
+                    ? "Product rejected."
+                    : result?.Error ?? "Failed to reject product.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST /products/{id}/archive
+        [HttpPost("{id:guid}/archive")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
+        {
+            var token = _tokenService.GetAccessToken() ?? "";
+            var result = await _api.ArchiveProductAsync(token, id);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
+                    ? "Product archived."
+                    : result?.Error ?? "Failed to archive product.";
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // POST /products/{id}/delete
+        [HttpPost("{id:guid}/delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+        {
+            var token = _tokenService.GetAccessToken() ?? "";
+            await _api.DeleteProductAsync(token, id);
+            TempData["Success"] = "Product deleted.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ── Private ────────────────────────────────────────────
+        private async Task PopulateDropdowns(CreateProductViewModel vm)
+        {
+            var token = _tokenService.GetAccessToken() ?? "";
+            var categories = await _api.GetCategoriesAsync(token);
+            var brands = await _api.GetBrandsAsync(token);
+            var tags = await _api.GetTagsAsync(token);
+
+            vm.Categories = categories?.Data?.Select(c =>
+                new SelectItem { Id = c.Id, Name = c.Name }).ToList() ?? [];
+
+            vm.Brands = brands?.Data?.Select(b =>
+                new SelectItem { Id = b.Id, Name = b.Name }).ToList() ?? [];
+
+            vm.AvailableTags = tags?.Data?.Select(t =>
+                new SelectItem
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Selected = vm.SelectedTagIds.Contains(t.Id)
+                }).ToList() ?? [];
+        }
+
+        private static ProductSeoRequest BuildSeoRequest(CreateProductViewModel vm)
+            => new()
+            {
+                MetaTitle = vm.MetaTitle,
+                MetaDescription = vm.MetaDescription,
+                MetaKeywords = vm.MetaKeywords,
+                CanonicalUrl = vm.CanonicalUrl,
+                OgTitle = vm.OgTitle,
+                OgDescription = vm.OgDescription,
+                OgImageUrl = vm.OgImageUrl
+            };
     }
 }

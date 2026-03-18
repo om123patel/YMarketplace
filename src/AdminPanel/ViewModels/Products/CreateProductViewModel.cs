@@ -2,63 +2,57 @@
 
 namespace AdminPanel.ViewModels.Products
 {
-    public class ProductFormViewModel
+    public class CreateProductViewModel
     {
-        // ── Mode flags ────────────────────────────────────────────
-        public Guid? Id { get; set; }        // null = Create
-        public bool IsAdminMode { get; set; }        // set from User.IsInRole("Admin")
-        public bool IsEditMode => Id.HasValue;
+        // ── Mode ───────────────────────────────────────────────
+        // null = Create, has value = Edit
+        public Guid? Id { get; set; }
 
-        // ── Step 1 · Basic Info ───────────────────────────────────
-        [Required(ErrorMessage = "Product name is required")]
-        [StringLength(300, MinimumLength = 3,
-            ErrorMessage = "Name must be between 3 and 300 characters")]
-        public string Name { get; set; } = string.Empty;
+        // Backing field so <input type="hidden" asp-for="IsAdminMode" /> 
+        // survives the POST round-trip
+        public bool IsAdminMode { get; set; } = true;
 
-        [Required(ErrorMessage = "Slug is required")]
-        [RegularExpression(@"^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            ErrorMessage = "Slug must be lowercase letters, numbers and hyphens only")]
-        public string Slug { get; set; } = string.Empty;
-
+        // ── Step 1: Basic Info ─────────────────────────────────
+        [Required] public string Name { get; set; } = string.Empty;
+        [Required] public string Slug { get; set; } = string.Empty;
         public string? ShortDescription { get; set; }
         public string? Description { get; set; }
-
-        [Required(ErrorMessage = "Please select a category")]
-        [Range(1, int.MaxValue, ErrorMessage = "Please select a category")]
-        public int CategoryId { get; set; }
-
+        [Required] public int CategoryId { get; set; }
         public int? BrandId { get; set; }
-
-        // Tag IDs — checkbox list posted as multiple values
-        public List<int> TagIds { get; set; } = [];
-
         public bool IsDigital { get; set; }
 
-        // ── Step 2 · Pricing ──────────────────────────────────────
-        [Required(ErrorMessage = "Selling price is required")]
-        [Range(0.01, 9_999_999, ErrorMessage = "Price must be greater than 0")]
+        // ── Step 2: Pricing ────────────────────────────────────
+        [Required]
+        [Range(0.01, double.MaxValue)]
         public decimal BasePrice { get; set; }
-
         public string CurrencyCode { get; set; } = "INR";
-
         public decimal? CompareAtPrice { get; set; }
-
-        // Present in both CreateProductDto and CreateSellerProductDto
         public decimal? CostPrice { get; set; }
-
         public string? Sku { get; set; }
         public string? Barcode { get; set; }
-
-        // ── Step 2 · Physical dimensions ─────────────────────────
         public decimal? WeightKg { get; set; }
         public decimal? LengthCm { get; set; }
         public decimal? WidthCm { get; set; }
         public decimal? HeightCm { get; set; }
 
-        // ── Step 3 · Variants ─────────────────────────────────────
-        public List<ProductVariantFormItem> Variants { get; set; } = [];
+        // ── Step 3: Variants ───────────────────────────────────
+        // Used by _PVariants partial to display/edit existing variants
+        private List<ExistingVariantItem> _variants = [];
 
-        // ── Step 4 · SEO ──────────────────────────────────────────
+        public List<ExistingVariantItem> Variants
+        {
+            get => _variants;
+            set => _variants = value;
+        }
+
+        public List<ExistingVariantItem> ExistingVariants
+        {
+            get => _variants;
+            set => _variants = value;
+        }
+
+
+        // ── Step 4: SEO ────────────────────────────────────────
         public string? MetaTitle { get; set; }
         public string? MetaDescription { get; set; }
         public string? MetaKeywords { get; set; }
@@ -67,16 +61,42 @@ namespace AdminPanel.ViewModels.Products
         public string? OgDescription { get; set; }
         public string? OgImageUrl { get; set; }
 
-        // ── Step 5 · Organization (Admin only) ───────────────────
+        // ── Step 5: Organisation (admin only) ──────────────────
         public bool IsFeatured { get; set; }
-        public string Status { get; set; } = "Draft";
+        public string? Status { get; set; }
         public string? RejectionReason { get; set; }
 
-        // ── Dropdowns (populated by controller, never posted) ─────
+        // Tags — partial uses Model.AvailableTags for the list,
+        //        Model.SelectedTagIds for the current selection
+        public List<int> SelectedTagIds { get; set; } = [];
+        private List<SelectItem> _availableTags = [];
+
+        public List<SelectItem> AvailableTags
+        {
+            get => _availableTags;
+            set => _availableTags = value;
+        }
+
+        public List<SelectItem> Tags
+        {
+            get => _availableTags;
+            set => _availableTags = value;
+        }
+
+
+        // Existing images (edit mode)
+        public List<ExistingImageItem> ExistingImages { get; set; } = [];
+
+        // Dropdowns
         public List<SelectItem> Categories { get; set; } = [];
         public List<SelectItem> Brands { get; set; } = [];
-        public List<TagSelectItem> AvailableTags { get; set; } = [];
+
+        // ── View helpers (computed, not posted) ────────────────
+        public bool IsEditMode => Id.HasValue;
+        public string PageTitle => IsEditMode ? "Edit Product" : "Create Product";
+        public string SubmitLabel => IsEditMode ? "Save Changes" : "Create Product";
     }
+
 
     // ─────────────────────────────────────────────────────────────
     // Variant nested model
@@ -125,6 +145,32 @@ namespace AdminPanel.ViewModels.Products
         public bool Selected { get; set; }
     }
 
- 
+    public class ExistingImageItem
+    {
+        public int Id { get; set; }
+        public string Url { get; set; } = string.Empty;
+        public bool IsPrimary { get; set; }
+    }
+
+    public class ExistingVariantItem
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public string CurrencyCode { get; set; } = "INR";
+        public decimal? CompareAtPrice { get; set; }
+        public decimal? CostPrice { get; set; }
+        public string? Sku { get; set; }
+        public string? Barcode { get; set; }
+        public bool IsActive { get; set; }
+        public List<ExistingAttributeItem> Attributes { get; set; } = [];
+    }
+
+    public class ExistingAttributeItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
+    }
 
 }

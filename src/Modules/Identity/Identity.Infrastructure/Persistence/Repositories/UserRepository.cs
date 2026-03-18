@@ -1,38 +1,65 @@
 ﻿using Identity.Application.Interfaces;
 using Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Shared.Application.Models;
 using Shared.Infrastructure.Persistence;
 
 namespace Identity.Infrastructure.Persistence.Repositories
 {
-    public class UserRepository
-    : BaseRepository<User, Guid, IdentityDbContext>, IUserRepository
+    public class UserRepository : IUserRepository
     {
-        public UserRepository(IdentityDbContext context) : base(context) { }
+        private readonly IdentityDbContext _db;
+
+        public UserRepository(IdentityDbContext db) => _db = db;
+
+        public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => await _db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
 
         public async Task<User?> GetByEmailAsync(
             string email, CancellationToken ct = default)
-            => await DbSet
-                .FirstOrDefaultAsync(u =>
-                    u.Email == email.ToLowerInvariant(), ct);
+            => await _db.Users.FirstOrDefaultAsync(
+                u => u.Email == email.ToLowerInvariant(), ct);
 
-        public async Task<User?> GetByIdWithTokensAsync(
-            Guid id, CancellationToken ct = default)
-            => await DbSet
-                .Include(u => u.RefreshTokens)
-                .FirstOrDefaultAsync(u => u.Id == id, ct);
-
-        public async Task<User?> GetByRefreshTokenAsync(
-            string token, CancellationToken ct = default)
-            => await DbSet
-                .Include(u => u.RefreshTokens)
-                .FirstOrDefaultAsync(u =>
-                    u.RefreshTokens.Any(t => t.Token == token), ct);
-
-        public async Task<bool> EmailExistsAsync(
+        public async Task<bool> ExistsByEmailAsync(
             string email, CancellationToken ct = default)
-            => await DbSet.AnyAsync(u =>
-                u.Email == email.ToLowerInvariant(), ct);
+            => await _db.Users.AnyAsync(
+                u => u.Email == email.ToLowerInvariant(), ct);
+
+        public async Task<PagedList<User>> GetPagedAsync(
+            int page, int pageSize,
+            string? role, string? status, string? search,
+            CancellationToken ct = default)
+        {
+            var query = _db.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(role))
+                query = query.Where(u => u.Role.ToString() == role);
+
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(u => u.Status.ToString() == status);
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(u =>
+                    u.Email.Contains(search) ||
+                    u.FirstName.Contains(search) ||
+                    u.LastName.Contains(search));
+
+            var total = await query.CountAsync(ct);
+            var items = await query
+                .OrderByDescending(u => u.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            return new PagedList<User>(items, page, pageSize, total);
+        }
+
+        public async Task AddAsync(User user, CancellationToken ct = default)
+            => await _db.Users.AddAsync(user, ct);
+
+        public void Update(User user)
+            => _db.Users.Update(user);
     }
+
 
 }

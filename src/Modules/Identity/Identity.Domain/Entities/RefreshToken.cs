@@ -13,16 +13,13 @@ namespace Identity.Domain.Entities
         public string? ReplacedByToken { get; private set; }
         public string? CreatedByIp { get; private set; }
 
-        // Computed
-        public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
-        public bool IsActive => !IsRevoked && !IsExpired;
-
         private RefreshToken() { } // EF Core
 
         public static RefreshToken Create(
             Guid userId,
             string token,
             DateTime expiresAt,
+            Guid createdBy,
             string? createdByIp = null)
         {
             return new RefreshToken
@@ -34,9 +31,12 @@ namespace Identity.Domain.Entities
                 CreatedByIp = createdByIp,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                CreatedBy = userId
+                CreatedBy = createdBy
             };
         }
+
+        public bool IsExpired() => DateTime.UtcNow >= ExpiresAt;
+        public bool IsActive() => !IsRevoked && !IsExpired();
 
         public void Revoke(string reason, string? replacedByToken = null)
         {

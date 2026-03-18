@@ -6,38 +6,27 @@ namespace Identity.Infrastructure.Persistence.Configurations
 {
     public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
     {
-        public void Configure(EntityTypeBuilder<RefreshToken> builder)
+        public void Configure(EntityTypeBuilder<RefreshToken> b)
         {
-            builder.ToTable("RefreshTokens", "identity");
+            b.ToTable("RefreshTokens", "identity");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Id).UseIdentityColumn();
 
-            builder.HasKey(x => x.Id);
+            b.Property(t => t.Token).IsRequired().HasMaxLength(500);
+            b.Property(t => t.RevokedReason).HasMaxLength(200);
+            b.Property(t => t.ReplacedByToken).HasMaxLength(500);
+            b.Property(t => t.CreatedByIp).HasMaxLength(50);
 
-            builder.Property(x => x.Id)
-                .UseIdentityColumn();
+            b.HasIndex(t => t.Token)
+                .IsUnique()
+                .HasDatabaseName("UIX_RefreshTokens_Token");
 
-            builder.Property(x => x.Token)
-                .IsRequired()
-                .HasMaxLength(500);
+            b.HasIndex(t => t.UserId)
+                .HasDatabaseName("IX_RefreshTokens_UserId");
 
-            builder.Property(x => x.CreatedByIp)
-                .HasMaxLength(50);
-
-            builder.Property(x => x.RevokedReason)
-                .HasMaxLength(200);
-
-            builder.Property(x => x.ReplacedByToken)
-                .HasMaxLength(500);
-
-            builder.Property(x => x.CreatedAt)
-                .HasDefaultValueSql("GETUTCDATE()");
-
-            builder.Property(x => x.UpdatedAt)
-                .HasDefaultValueSql("GETUTCDATE()");
-
-            // Indexes
-            builder.HasIndex(x => x.Token).IsUnique();
-            builder.HasIndex(x => x.UserId);
+            // No soft delete filter — tokens are revoked not deleted
         }
     }
+
 
 }

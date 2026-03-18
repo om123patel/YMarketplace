@@ -1,10 +1,10 @@
 ﻿using Identity.Domain.Enums;
-using Identity.Domain.Events;
-using Identity.Domain.Exceptions;
 using Shared.Domain.Abstractions;
+using Shared.Domain.Exceptions;
 
 namespace Identity.Domain.Entities
 {
+
     public class User : AggregateRoot<Guid>, IConcurrencyToken
     {
         public string FirstName { get; private set; } = string.Empty;
@@ -13,170 +13,128 @@ namespace Identity.Domain.Entities
         public string PasswordHash { get; private set; } = string.Empty;
         public string? PhoneNumber { get; private set; }
         public string? AvatarUrl { get; private set; }
+
         public UserRole Role { get; private set; }
         public UserStatus Status { get; private set; }
+
+        // Login tracking
         public DateTime? LastLoginAt { get; private set; }
         public int FailedLoginAttempts { get; private set; }
         public DateTime? LockedUntil { get; private set; }
 
-        // IConcurrencyToken
+        // Optimistic concurrency
         public byte[]? RowVersion { get; private set; }
-
-        // Computed
-        public string FullName => $"{FirstName} {LastName}";
-        public bool IsLocked => LockedUntil.HasValue
-            && LockedUntil.Value > DateTime.UtcNow;
-
-        // Navigation
-        public ICollection<RefreshToken> RefreshTokens { get; private set; } = [];
 
         private User() { } // EF Core
 
-        // ── Factory ──
+        // ── Factory ────────────────────────────────────────────
         public static User Create(
             string firstName,
             string lastName,
             string email,
             string passwordHash,
             UserRole role,
+            Guid createdBy,
             string? phoneNumber = null)
         {
-            var user = new User
+            if (string.IsNullOrWhiteSpace(email))
+                throw new DomainException("INVALID_EMAIL", "Email is required.");
+
+            if (string.IsNullOrWhiteSpace(passwordHash))
+                throw new DomainException("INVALID_PASSWORD", "Password hash is required.");
+
+            return new User
             {
                 Id = Guid.NewGuid(),
-                FirstName = firstName,
-                LastName = lastName,
-                Email = email.ToLowerInvariant(),
+                FirstName = firstName.Trim(),
+                LastName = lastName.Trim(),
+                Email = email.Trim().ToLowerInvariant(),
                 PasswordHash = passwordHash,
                 PhoneNumber = phoneNumber,
                 Role = role,
-                Status = UserStatus.Active,
+                Status = role == UserRole.Buyer
+                                    ? UserStatus.Active
+                                    : UserStatus.PendingVerification,
                 FailedLoginAttempts = 0,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                CreatedBy = Guid.Empty // set after save
+                CreatedBy = createdBy
             };
-
-            user.RaiseDomainEvent(
-                new UserRegisteredEvent(user.Id, user.Email, role.ToString()));
-
-            return user;
         }
 
-        // ── Login ──
-        public void RecordLogin()
+        public string FullName => $"{FirstName} {LastName}";
+
+        // ── Domain behaviours ──────────────────────────────────
+        public void RecordSuccessfulLogin()
         {
-            if (IsLocked)
-                throw new IdentityException(
-                    "ACCOUNT_LOCKED",
-                    $"Account is locked until {LockedUntil:yyyy-MM-dd HH:mm} UTC.");
-
-            if (Status != UserStatus.Active)
-                throw new IdentityException(
-                    "ACCOUNT_INACTIVE",
-                    "Account is not active.");
-
             LastLoginAt = DateTime.UtcNow;
             FailedLoginAttempts = 0;
+            LockedUntil = null;
             UpdatedAt = DateTime.UtcNow;
-
-            RaiseDomainEvent(new UserLoggedInEvent(Id, Email));
         }
 
-        public void RecordFailedLogin()
+        public void RecordFailedLogin(int maxAttempts = 5)
         {
             FailedLoginAttempts++;
 
-            // Lock account after 5 failed attempts for 15 minutes
-            if (FailedLoginAttempts >= 5)
-            {
+            if (FailedLoginAttempts >= maxAttempts)
                 LockedUntil = DateTime.UtcNow.AddMinutes(15);
-            }
 
             UpdatedAt = DateTime.UtcNow;
         }
 
-        // ── Refresh Tokens ──
-        public RefreshToken AddRefreshToken(
-            string token,
-            DateTime expiresAt,
-            string? ipAddress = null)
-        {
-            // Revoke all existing active refresh tokens — one active token per user
-            foreach (var existingToken in RefreshTokens.Where(t => t.IsActive))
-                existingToken.Revoke("Replaced by new token.");
+        public bool IsLockedOut()
+            => LockedUntil.HasValue && LockedUntil.Value > DateTime.UtcNow;
 
-            var refreshToken = RefreshToken.Create(Id, token, expiresAt, ipAddress);
-            RefreshTokens.Add(refreshToken);
-
-            return refreshToken;
-        }
-
-        public RefreshToken? GetActiveRefreshToken(string token)
-            => RefreshTokens.FirstOrDefault(t => t.Token == token && t.IsActive);
-
-        public void RevokeRefreshToken(string token, string reason)
-        {
-            var refreshToken = RefreshTokens.FirstOrDefault(t => t.Token == token);
-            refreshToken?.Revoke(reason);
-        }
-
-        // ── Profile ──
-        public void UpdateProfile(
-            string firstName,
-            string lastName,
-            string? phoneNumber,
-            string? avatarUrl,
-            Guid updatedBy)
-        {
-            FirstName = firstName;
-            LastName = lastName;
-            PhoneNumber = phoneNumber;
-            AvatarUrl = avatarUrl;
-            SetUpdatedBy(updatedBy);
-        }
-
-        public void ChangePassword(string newPasswordHash, Guid updatedBy)
-        {
-            PasswordHash = newPasswordHash;
-
-            // Revoke all refresh tokens on password change
-            foreach (var token in RefreshTokens.Where(t => t.IsActive))
-                token.Revoke("Password changed.");
-
-            SetUpdatedBy(updatedBy);
-        }
-
-        // ── Status ──
         public void Activate(Guid updatedBy)
         {
             Status = UserStatus.Active;
+            UpdatedAt = DateTime.UtcNow;
             SetUpdatedBy(updatedBy);
         }
 
         public void Suspend(Guid updatedBy)
         {
+            if (Status == UserStatus.Suspended)
+                throw new DomainException("ALREADY_SUSPENDED", "User is already suspended.");
+
             Status = UserStatus.Suspended;
-
-            // Revoke all refresh tokens on suspension
-            foreach (var token in RefreshTokens.Where(t => t.IsActive))
-                token.Revoke("Account suspended.");
-
+            UpdatedAt = DateTime.UtcNow;
             SetUpdatedBy(updatedBy);
         }
 
         public void Deactivate(Guid updatedBy)
         {
             Status = UserStatus.Inactive;
+            UpdatedAt = DateTime.UtcNow;
             SetUpdatedBy(updatedBy);
         }
 
-        public void UnlockAccount(Guid updatedBy)
+        public void UpdateProfile(
+            string firstName, string lastName,
+            string? phoneNumber, Guid updatedBy)
         {
-            LockedUntil = null;
-            FailedLoginAttempts = 0;
+            FirstName = firstName.Trim();
+            LastName = lastName.Trim();
+            PhoneNumber = phoneNumber;
+            UpdatedAt = DateTime.UtcNow;
+            SetUpdatedBy(updatedBy);
+        }
+
+        public void UpdatePasswordHash(string newHash, Guid updatedBy)
+        {
+            PasswordHash = newHash;
+            UpdatedAt = DateTime.UtcNow;
+            SetUpdatedBy(updatedBy);
+        }
+
+        public void SetAvatarUrl(string url, Guid updatedBy)
+        {
+            AvatarUrl = url;
+            UpdatedAt = DateTime.UtcNow;
             SetUpdatedBy(updatedBy);
         }
     }
+
 
 }

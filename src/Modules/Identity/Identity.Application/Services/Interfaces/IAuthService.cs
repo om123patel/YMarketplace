@@ -1,30 +1,17 @@
 ﻿using Identity.Application.DTOs;
 using Shared.Application.Models;
 
-namespace Identity.Application.Services.Interfaces
+namespace Identity.Application.Interfaces
 {
     public interface IAuthService
     {
-        Task<Result<AuthResponseDto>> RegisterAsync(
-            RegisterUserDto dto, CancellationToken ct = default);
-
-        Task<Result<AuthResponseDto>> LoginAsync(
-            LoginDto dto, CancellationToken ct = default);
-
-        Task<Result<AuthResponseDto>> RefreshTokenAsync(
-            RefreshTokenDto dto, CancellationToken ct = default);
-
+        Task<Result<AuthResultDto>> RegisterAsync(
+            RegisterDto dto, CancellationToken ct = default);
+        Task<Result<AuthResultDto>> LoginAsync(
+            LoginDto dto, string? ipAddress = null, CancellationToken ct = default);
+        Task<Result<AuthResultDto>> RefreshTokenAsync(
+            string refreshToken, string? ipAddress = null, CancellationToken ct = default);
         Task<Result> RevokeTokenAsync(
-            string refreshToken, CancellationToken ct = default);
-
-        Task<Result<UserDto>> GetCurrentUserAsync(
-            Guid userId, CancellationToken ct = default);
-
-        Task<Result<UserDto>> UpdateProfileAsync(
-            Guid userId, UpdateProfileDto dto, CancellationToken ct = default);
-
-        Task<Result> ChangePasswordAsync(
-            Guid userId, ChangePasswordDto dto, CancellationToken ct = default);
+            string refreshToken, Guid userId, CancellationToken ct = default);
     }
-
 }

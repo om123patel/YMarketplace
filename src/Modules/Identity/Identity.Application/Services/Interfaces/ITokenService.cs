@@ -1,13 +1,13 @@
 ﻿using Identity.Domain.Entities;
 
-namespace Identity.Application.Interfaces
+namespace Identity.Application.Services.Interfaces
 {
     public interface ITokenService
     {
         string GenerateAccessToken(User user);
         string GenerateRefreshToken();
-        DateTime GetAccessTokenExpiry();
         DateTime GetRefreshTokenExpiry();
+        DateTime GetAccessTokenExpiry();
     }
 
 }

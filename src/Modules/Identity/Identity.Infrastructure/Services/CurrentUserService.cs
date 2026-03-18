@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
-using Identity.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
-using System.IdentityModel.Tokens.Jwt; // Ensure this is present for JwtRegisteredClaimNames
+using System.IdentityModel.Tokens.Jwt;
+using Identity.Application.Services.Interfaces; // Ensure this is present for JwtRegisteredClaimNames
 
 namespace Identity.Infrastructure.Services
 {

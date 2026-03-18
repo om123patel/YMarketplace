@@ -1,5 +1,6 @@
 ﻿using Identity.Application;
 using Identity.Application.Interfaces;
+using Identity.Application.Services.Interfaces;
 using Identity.Infrastructure.Persistence;
 using Identity.Infrastructure.Persistence.Repositories;
 using Identity.Infrastructure.Persistence.UnitOfWork;
@@ -46,10 +47,12 @@ public static class IdentityModule
 
         // ── 4. Repositories ────────────────────────────────────
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IVendorApplicationRepository, VendorApplicationRepository>();
 
         // ── 5. Infrastructure Services ─────────────────────────
         services.AddScoped<ITokenService, TokenService>();
-        services.AddScoped<IPasswordService, PasswordService>();
+        services.AddScoped<IPasswordHasher, PasswordService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         // ── 6. JWT Token Validation Rules ─────────────────────

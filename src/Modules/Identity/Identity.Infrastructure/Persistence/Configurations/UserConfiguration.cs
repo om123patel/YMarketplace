@@ -7,80 +7,53 @@ namespace Identity.Infrastructure.Persistence.Configurations
 {
     public class UserConfiguration : IEntityTypeConfiguration<User>
     {
-        public void Configure(EntityTypeBuilder<User> builder)
+        public void Configure(EntityTypeBuilder<User> b)
         {
-            builder.ToTable("Users", "identity");
+            b.ToTable("Users", "identity");
+            b.HasKey(u => u.Id);
 
-            builder.HasKey(x => x.Id);
+            b.Property(u => u.FirstName).IsRequired().HasMaxLength(100);
+            b.Property(u => u.LastName).IsRequired().HasMaxLength(100);
+            b.Property(u => u.Email).IsRequired().HasMaxLength(255);
+            b.Property(u => u.PasswordHash).IsRequired().HasMaxLength(500);
+            b.Property(u => u.PhoneNumber).HasMaxLength(20);
+            b.Property(u => u.AvatarUrl).HasMaxLength(500);
 
-            builder.Property(x => x.Id)
-                .HasDefaultValueSql("NEWSEQUENTIALID()");
-
-            builder.Property(x => x.FirstName)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            builder.Property(x => x.LastName)
-                .IsRequired()
-                .HasMaxLength(100);
-
-            builder.Property(x => x.Email)
-                .IsRequired()
-                .HasMaxLength(255);
-
-            builder.Property(x => x.PasswordHash)
-                .IsRequired()
-                .HasMaxLength(500);
-
-            builder.Property(x => x.PhoneNumber)
-                .HasMaxLength(20);
-
-            builder.Property(x => x.AvatarUrl)
-                .HasMaxLength(500);
-
-            builder.Property(x => x.Role)
+            // Store enums as strings
+            b.Property(u => u.Role)
                 .HasConversion(
                     r => r.ToString(),
                     r => Enum.Parse<UserRole>(r))
-                .HasMaxLength(20);
+                .HasMaxLength(20)
+                .IsRequired();
 
-            builder.Property(x => x.Status)
+            b.Property(u => u.Status)
                 .HasConversion(
                     s => s.ToString(),
                     s => Enum.Parse<UserStatus>(s))
                 .HasMaxLength(30)
-                .HasDefaultValue(UserStatus.Active);
+                .IsRequired();
 
-            builder.Property(x => x.FailedLoginAttempts)
-                .HasDefaultValue(0);
+            b.Property(u => u.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
 
-            builder.Property(x => x.IsDeleted)
-                .HasDefaultValue(false);
-
-            builder.Property(x => x.CreatedAt)
-                .HasDefaultValueSql("GETUTCDATE()");
-
-            builder.Property(x => x.UpdatedAt)
-                .HasDefaultValueSql("GETUTCDATE()");
-
-            builder.Property(x => x.RowVersion)
-                .IsRowVersion();
-
-            // Relationship to RefreshTokens
-            builder.HasMany(x => x.RefreshTokens)
-                .WithOne()
-                .HasForeignKey(x => x.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // Soft delete global filter
+            b.HasQueryFilter(u => !u.IsDeleted);
 
             // Indexes
-            builder.HasIndex(x => x.Email)
+            b.HasIndex(u => u.Email)
                 .IsUnique()
-                .HasFilter("[IsDeleted] = 0");
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("UIX_Users_Email_Active");
 
-            builder.HasIndex(x => x.Role)
-                .HasFilter("[IsDeleted] = 0");
+            b.HasIndex(u => u.Role)
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("IX_Users_Role");
 
-            builder.HasQueryFilter(x => !x.IsDeleted);
+            b.HasIndex(u => u.Status)
+                .HasFilter("[IsDeleted] = 0")
+                .HasDatabaseName("IX_Users_Status");
         }
     }
 
