@@ -11,14 +11,10 @@ namespace AdminPanel.Controllers
     [Authorize(Policy = "AdminOnly")]
     public class CategoriesController : Controller
     {
-        private readonly IApiClient _api;
+        private readonly ICategoryApiClient _categories;
         private readonly AuthTokenService _tokens;
-
-        public CategoriesController(IApiClient api, AuthTokenService tokens)
-        {
-            _api = api;
-            _tokens = tokens;
-        }
+        public CategoriesController(ICategoryApiClient categories, AuthTokenService tokens)
+        { _categories = categories; _tokens = tokens; }
 
         // GET /Categories
         public async Task<IActionResult> Index(
@@ -27,7 +23,7 @@ namespace AdminPanel.Controllers
             CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetCategoriesAsync(token);
+            var result = await _categories.GetCategoriesAsync(token);
             var all = result?.Data ?? [];
 
             var q = all.AsEnumerable();
@@ -62,15 +58,21 @@ namespace AdminPanel.Controllers
                 _ => items.OrderBy(i => i.Name).ToList()
             };
 
-            return View(new CategoryListViewModel
+            var vm = new CategoryListViewModel
             {
                 Items = items,
+                TotalCount = items.Count,
+                Page = 1,
+                PageSize = items.Count == 0 ? 20 : items.Count,
                 Search = search,
                 StatusFilter = status,
                 SortBy = sortBy,
                 SortDirection = sortDirection
-            });
+            };
+            vm.BuildRouteData();
+            return View(vm);
         }
+
 
         // GET /Categories/Create
         [HttpGet]
@@ -91,7 +93,7 @@ namespace AdminPanel.Controllers
                 return View(vm);
             }
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.CreateCategoryAsync(token, new CreateCategoryRequest
+            var result = await _categories.CreateCategoryAsync(token, new CreateCategoryRequest
             {
                 Name = vm.Name,
                 Slug = vm.Slug,
@@ -116,7 +118,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetCategoryByIdAsync(token, id);
+            var result = await _categories.GetCategoryByIdAsync(token, id);
             if (result?.Data is null) { TempData["Error"] = "Category not found."; return RedirectToAction(nameof(Index)); }
             var c = result.Data;
             var vm = new EditCategoryViewModel
@@ -145,7 +147,7 @@ namespace AdminPanel.Controllers
                 return View(vm);
             }
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.UpdateCategoryAsync(token, id, new UpdateCategoryRequest
+            var result = await _categories.UpdateCategoryAsync(token, id, new UpdateCategoryRequest
             {
                 Name = vm.Name,
                 Slug = vm.Slug,
@@ -171,7 +173,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.DeleteCategoryAsync(token, id);
+            var result = await _categories.DeleteCategoryAsync(token, id);
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true ? "Category deleted." : result?.Error ?? "Cannot delete this category.";
             return RedirectToAction(nameof(Index));
@@ -182,7 +184,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Toggle(int id, bool activate, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.ToggleCategoryActiveAsync(token, id, activate);
+            var result = await _categories.ToggleCategoryActiveAsync(token, id, activate);
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
                     ? (activate ? "Category activated." : "Category deactivated.")
@@ -192,7 +194,7 @@ namespace AdminPanel.Controllers
 
         private async Task PopulateParents(List<ParentCategoryOption> list, string token, int? excludeId = null)
         {
-            var result = await _api.GetCategoriesAsync(token);
+            var result = await _categories.GetCategoriesAsync(token);
             list.AddRange(result?.Data?
                 .Where(c => c.ParentId == null && c.Id != excludeId)
                 .Select(c => new ParentCategoryOption { Id = c.Id, Name = c.Name }) ?? []);

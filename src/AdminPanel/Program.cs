@@ -67,18 +67,26 @@ namespace AdminPanel
             });
 
             // ── Typed HTTP Client ──────────────────────────────────────
-            var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"]
-                ?? "https://localhost:7001";
+            var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? "https://localhost:7276/";
 
-            services.AddHttpClient<IApiClient, ApiClient>(client =>
+            void ConfigureClient(HttpClient c)
             {
-                client.BaseAddress = new Uri(apiBaseUrl);
-                client.Timeout = TimeSpan.FromSeconds(30);
-                client.DefaultRequestHeaders.Add("Accept", "application/json");
-            });
+                c.BaseAddress = new Uri(apiBaseUrl);
+                c.Timeout = TimeSpan.FromSeconds(30);
+                c.DefaultRequestHeaders.Add("Accept", "application/json");
+            }
+
 
             // ── Application Services ───────────────────────────────────
             services.AddScoped<AuthTokenService>();
+            services.AddHttpClient<IApiClient, ApiClient>(ConfigureClient);
+            services.AddHttpClient<IProductApiClient, ProductApiClient>(ConfigureClient);
+            services.AddHttpClient<ICategoryApiClient, CategoryApiClient>(ConfigureClient);
+            services.AddHttpClient<IBrandApiClient, BrandApiClient>(ConfigureClient);
+            services.AddHttpClient<ITagApiClient, TagApiClient>(ConfigureClient);
+            services.AddHttpClient<IAttributeApiClient, AttributeApiClient>(ConfigureClient);
+            services.AddHttpClient<ISellerApiClient, SellerApiClient>(ConfigureClient);
+
 
             // ──────────────────────────────────────────────────────────
             // BUILD APP

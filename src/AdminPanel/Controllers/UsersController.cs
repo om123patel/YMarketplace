@@ -9,59 +9,52 @@ namespace AdminPanel.Controllers
     [Authorize(Policy = "AdminOnly")]
     public class UsersController : Controller
     {
-        private readonly IApiClient _api;
+        private readonly IUserApiClient _users;
         private readonly AuthTokenService _tokens;
 
-        public UsersController(IApiClient api, AuthTokenService tokens)
+        public UsersController(IUserApiClient api, AuthTokenService tokens)
         {
-            _api = api;
+            _users = api;
             _tokens = tokens;
         }
 
-        // ══════════════════════════════════════════════════════
-        // GET /Users
-        // ══════════════════════════════════════════════════════
         public async Task<IActionResult> Index(
-            string? search,
-            string? role,
-            string? status,
-            string sortBy = "createdat",
-            string sortDirection = "desc",
-            int page = 1,
-            CancellationToken ct = default)
+            string? search, string? role, string? status,
+            string sortBy = "createdat", string sortDirection = "desc",
+            int page = 1, CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetUsersAsync(
+            var result = await _users.GetUsersAsync(
                 token, page, 20, search, role, status, sortBy, sortDirection);
 
             var vm = new UserListViewModel
             {
-                Items = result?.Data?.Items
-                    .Select(u => new UserListItem
-                    {
-                        Id = u.Id,
-                        FullName = u.FullName,
-                        Email = u.Email,
-                        PhoneNumber = u.PhoneNumber,
-                        AvatarUrl = u.AvatarUrl,
-                        Role = u.Role,
-                        Status = u.Status,
-                        LastLoginAt = u.LastLoginAt,
-                        FailedLoginAttempts = u.FailedLoginAttempts,
-                        CreatedAt = u.CreatedAt
-                    }).ToList() ?? [],
+                Items = result?.Data?.Items.Select(u => new UserListItem
+                {
+                    Id = u.Id,
+                    FullName = u.FullName,
+                    Email = u.Email,
+                    PhoneNumber = u.PhoneNumber,
+                    AvatarUrl = u.AvatarUrl,
+                    Role = u.Role,
+                    Status = u.Status,
+                    LastLoginAt = u.LastLoginAt,
+                    FailedLoginAttempts = u.FailedLoginAttempts,
+                    CreatedAt = u.CreatedAt
+                }).ToList() ?? [],
                 Page = result?.Data?.Page ?? page,
                 PageSize = result?.Data?.PageSize ?? 20,
                 TotalCount = result?.Data?.TotalCount ?? 0,
                 Search = search,
+                StatusFilter = status,
                 Role = role,
-                Status = status,
                 SortBy = sortBy,
                 SortDirection = sortDirection
             };
-
+            vm.BuildRouteData(new() { ["role"] = role });
             return View(vm);
         }
+
 
         // ══════════════════════════════════════════════════════
         // GET /Users/{id}
@@ -71,7 +64,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetUserByIdAsync(token, id);
+            var result = await _users.GetUserByIdAsync(token, id);
 
             if (result?.Data is null)
             {
@@ -119,7 +112,7 @@ namespace AdminPanel.Controllers
             }
 
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.SuspendUserAsync(token, id, reason);
+            var result = await _users.SuspendUserAsync(token, id, reason);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -139,7 +132,7 @@ namespace AdminPanel.Controllers
             Guid id, string? returnUrl, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.ActivateUserAsync(token, id);
+            var result = await _users.ActivateUserAsync(token, id);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -159,7 +152,7 @@ namespace AdminPanel.Controllers
             Guid id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.DeleteUserAsync(token, id);
+            var result = await _users.DeleteUserAsync(token, id);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true

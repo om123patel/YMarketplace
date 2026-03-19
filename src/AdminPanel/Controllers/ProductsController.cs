@@ -1,7 +1,7 @@
-using AdminPanel.Dtos;
 using AdminPanel.Dtos.Products;
 using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
+using AdminPanel.ViewModels.Common;
 using AdminPanel.ViewModels.Products;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,25 +12,48 @@ namespace AdminPanel.Controllers
     [Route("products")]
     public class ProductsController : Controller
     {
-        private readonly IApiClient _api;
         private readonly AuthTokenService _tokenService;
+        private readonly IProductApiClient _products;
+        private readonly ICategoryApiClient _categories;
+        private readonly IBrandApiClient _brands;
+        private readonly ITagApiClient _tags;
+        
 
-        public ProductsController(IApiClient api, AuthTokenService tokenService)
+        public ProductsController(IProductApiClient products,
+    ICategoryApiClient categories,
+    IBrandApiClient brands,
+    ITagApiClient tags,
+    AuthTokenService tokenService)
         {
-            _api = api;
+            _products = products;
+            _categories = categories;
+            _brands = brands;
+            _tags = tags;
             _tokenService = tokenService;
         }
 
-        // GET /products
         [HttpGet("")]
         public async Task<IActionResult> Index(
-            string? search, string? status,
-            int? categoryId, int page = 1,
-            CancellationToken ct = default)
+    string? search, string? status,
+    int? categoryId, int? brandId,
+    string? creatorType,
+    string sortBy = "createdat",
+    string sortDirection = "desc",
+    int page = 1,
+    CancellationToken ct = default)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            var result = await _api.GetProductsAsync(
-                token, page, 20, search, status, categoryId);
+
+            var resultTask = _products.GetProductsAsync(token, page, 20, search, status,
+                                     categoryId, brandId, creatorType, sortBy, sortDirection);
+            var categoriesTask = _categories.GetCategoriesAsync(token);
+            var brandsTask = _brands.GetBrandsAsync(token);
+
+            await Task.WhenAll(resultTask, categoriesTask, brandsTask);
+
+            var result = await resultTask;
+            var categories = await categoriesTask;
+            var brands = await brandsTask;
 
             var vm = new ProductListViewModel
             {
@@ -45,14 +68,25 @@ namespace AdminPanel.Controllers
                     Status = p.Status,
                     SellerName = p.SellerName,
                     PrimaryImageUrl = p.PrimaryImageUrl,
+                    IsFeatured = p.IsFeatured,
+                    //VariantCount = p.VariantCount,
+                    //CreatorType = p.CreatorType,
                     CreatedAt = p.CreatedAt
                 }).ToList() ?? [],
                 Page = result?.Data?.Page ?? 1,
                 PageSize = result?.Data?.PageSize ?? 20,
                 TotalCount = result?.Data?.TotalCount ?? 0,
                 Search = search,
-                Status = status,
-                CategoryId = categoryId
+                StatusFilter = status,
+                CategoryId = categoryId,
+                BrandId = brandId,
+                CreatorType = creatorType,
+                SortBy = sortBy,
+                SortDirection = sortDirection,
+                Categories = categories?.Data?.Select(c =>
+                    new FilterOption { Value = c.Id.ToString(), Label = c.Name }).ToList() ?? [],
+                Brands = brands?.Data?.Select(b =>
+                    new FilterOption { Value = b.Id.ToString(), Label = b.Name }).ToList() ?? []
             };
 
             return View(vm);
@@ -72,7 +106,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Edit(Guid id, CancellationToken ct)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            var result = await _api.GetProductByIdAsync(token, id);
+            var result = await _products.GetProductByIdAsync(token, id);
 
             if (result?.Success != true || result.Data is null)
             {
@@ -144,7 +178,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            var result = await _api.GetProductByIdAsync(token, id);
+            var result = await _products.GetProductByIdAsync(token, id);
 
             if (result?.Success != true || result.Data is null)
             {
@@ -173,7 +207,7 @@ namespace AdminPanel.Controllers
                 IsFeatured = p.IsFeatured,
                 Status = p.Status,
                 RejectionReason = p.RejectionReason,
-               // CreatorType = p.CreatorType,
+                // CreatorType = p.CreatorType,
                 SellerId = p.SellerId,
                 SellerName = p.SellerName,
                 CreatedAt = p.CreatedAt,
@@ -236,7 +270,7 @@ namespace AdminPanel.Controllers
 
             if (vm.IsEditMode)
             {
-                var result = await _api.UpdateProductAsync(
+                var result = await _products.UpdateProductAsync(
                     token, vm.Id!.Value, new UpdateProductRequest
                     {
                         Name = vm.Name,
@@ -268,7 +302,7 @@ namespace AdminPanel.Controllers
             }
             else
             {
-                var result = await _api.CreateProductAsync(
+                var result = await _products.CreateProductAsync(
                     token, new CreateProductRequest
                     {
                         Name = vm.Name,
@@ -304,7 +338,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Approve(Guid id, CancellationToken ct)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            var result = await _api.ApproveProductAsync(token, id);
+            var result = await _products.ApproveProductAsync(token, id);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -321,7 +355,7 @@ namespace AdminPanel.Controllers
             Guid id, string reason, CancellationToken ct)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            var result = await _api.RejectProductAsync(token, id, reason);
+            var result = await _products.RejectProductAsync(token, id, reason);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -337,7 +371,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            var result = await _api.ArchiveProductAsync(token, id);
+            var result = await _products.ArchiveProductAsync(token, id);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -353,7 +387,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            await _api.DeleteProductAsync(token, id);
+            await _products.DeleteProductAsync(token, id);
             TempData["Success"] = "Product deleted.";
             return RedirectToAction(nameof(Index));
         }
@@ -362,9 +396,9 @@ namespace AdminPanel.Controllers
         private async Task PopulateDropdowns(CreateProductViewModel vm)
         {
             var token = _tokenService.GetAccessToken() ?? "";
-            var categories = await _api.GetCategoriesAsync(token);
-            var brands = await _api.GetBrandsAsync(token);
-            var tags = await _api.GetTagsAsync(token);
+            var categories = await _categories.GetCategoriesAsync(token);
+            var brands = await _brands.GetBrandsAsync(token);
+            var tags = await _tags.GetTagsAsync(token);
 
             vm.Categories = categories?.Data?.Select(c =>
                 new SelectItem { Id = c.Id, Name = c.Name }).ToList() ?? [];
@@ -392,5 +426,59 @@ namespace AdminPanel.Controllers
                 OgDescription = vm.OgDescription,
                 OgImageUrl = vm.OgImageUrl
             };
+
+        [HttpGet("seller")]
+        public async Task<IActionResult> Seller(
+    string? search, string? status,
+    int? categoryId,
+    string sortBy = "createdat",
+    string sortDirection = "desc",
+    int page = 1,
+    CancellationToken ct = default)
+        {
+            var token = _tokenService.GetAccessToken() ?? "";
+
+            var resultTask = _products.GetProductsAsync(
+                                    token, page, 20, search, status,
+                                    categoryId, brandId: null,
+                                    creatorType: "Seller",   // always filter to Seller only
+                                    sortBy, sortDirection);
+            var categoriesTask = _categories.GetCategoriesAsync(token);
+
+            await Task.WhenAll(resultTask, categoriesTask);
+
+            var result = await resultTask;
+            var categories = await categoriesTask;
+
+            var vm = new SellerProductListViewModel
+            {
+                Items = result?.Data?.Items.Select(p => new SellerProductListItem
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Sku = p.Sku,
+                    CategoryName = p.CategoryName,
+                    BasePrice = p.BasePrice,
+                    CurrencyCode = p.CurrencyCode,
+                    Status = p.Status,
+                    SellerName = p.SellerName,
+                    PrimaryImageUrl = p.PrimaryImageUrl,
+                    VariantCount = p.VariantCount,
+                    CreatedAt = p.CreatedAt
+                }).ToList() ?? [],
+                Page = result?.Data?.Page ?? 1,
+                PageSize = result?.Data?.PageSize ?? 20,
+                TotalCount = result?.Data?.TotalCount ?? 0,
+                Search = search,
+                StatusFilter = status,
+                CategoryId = categoryId,
+                SortBy = sortBy,
+                SortDirection = sortDirection,
+                Categories = categories?.Data?.Select(c =>
+                    new FilterOption { Value = c.Id.ToString(), Label = c.Name }).ToList() ?? []
+            };
+
+            return View(vm);
+        }
     }
 }

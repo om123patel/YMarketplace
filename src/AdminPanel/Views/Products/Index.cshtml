@@ -1,45 +1,17 @@
+@using AdminPanel.ViewModels.Common
 @using AdminPanel.ViewModels.Products
 @model ProductListViewModel
 @{
     ViewData["Title"] = "Products";
 
-    // Build sort helper — toggles direction if already sorted by this column
-    string SortLink(string col)
-    {
-        var dir = (Model.SortBy == col && Model.SortDirection == "asc") ? "desc" : "asc";
-        return $"?search={Uri.EscapeDataString(Model.Search ?? "")}" +
-               $"&status={Uri.EscapeDataString(Model.Status ?? "")}" +
-               $"&categoryId={Model.CategoryId}&brandId={Model.BrandId}" +
-               $"&creatorType={Uri.EscapeDataString(Model.CreatorType ?? "")}" +
-               $"&sortBy={col}&sortDirection={dir}&page=1";
-    }
-
-    string SortIcon(string col)
-    {
-        if (Model.SortBy != col) return "↕";
-        return Model.SortDirection == "asc" ? "↑" : "↓";
-    }
-
-    // Preserve all filters for pagination
-    var pgRoute = new Dictionary<string, string?>
-    {
-        ["search"]        = Model.Search,
-        ["status"]        = Model.Status,
-        ["categoryId"]    = Model.CategoryId?.ToString(),
-        ["brandId"]       = Model.BrandId?.ToString(),
-        ["creatorType"]   = Model.CreatorType,
-        ["sortBy"]        = Model.SortBy,
-        ["sortDirection"] = Model.SortDirection
-    };
-
     string StatusBadgeClass(string s) => s switch
     {
-        "Active"          => "badge badge-emerald",
+        "Active" => "badge badge-emerald",
         "PendingApproval" => "badge badge-amber",
-        "Rejected"        => "badge badge-rose",
-        "Archived"        => "badge badge-gray",
-        "Draft"           => "badge badge-sky",
-        _                 => "badge badge-gray"
+        "Rejected" => "badge badge-rose",
+        "Archived" => "badge badge-gray",
+        "Draft" => "badge badge-sky",
+        _ => "badge badge-gray"
     };
 
     string StatusLabel(string s) => s switch
@@ -57,13 +29,14 @@
     <div class="pg-actions">
         <a asp-action="Seller" class="btn btn-outline btn-sm">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
             Seller Products
         </a>
         <a asp-action="Create" class="btn btn-primary">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Add Product
         </a>
@@ -87,14 +60,15 @@
 
 <div class="card">
 
-    
+
     <form method="get" class="filter-bar">
-        <input type="hidden" name="sortBy"        value="@Model.SortBy" />
+        <input type="hidden" name="sortBy" value="@Model.SortBy" />
         <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
 
         <div class="filter-search">
             <svg class="filter-search-ico" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <input name="search" value="@Model.Search" placeholder="Search name or SKU…" class="filter-input" />
         </div>
@@ -103,7 +77,7 @@
             <option value="">All Statuses</option>
             @foreach (var s in new[] { "Active", "PendingApproval", "Draft", "Rejected", "Archived" })
             {
-                <option value="@s" selected="@(Model.Status == s)">@StatusLabel(s)</option>
+                <option value="@s" selected="@(Model.StatusFilter == s)">@StatusLabel(s)</option>
             }
         </select>
 
@@ -111,7 +85,7 @@
             <option value="">All Categories</option>
             @foreach (var c in Model.Categories)
             {
-                <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">@c.Name</option>
+                <option value="@c.Value" selected="@(Model.CategoryId == Convert.ToInt32(c.Value))">@c.Label</option>
             }
         </select>
 
@@ -119,32 +93,32 @@
             <option value="">All Brands</option>
             @foreach (var b in Model.Brands)
             {
-                <option value="@b.Id" selected="@(Model.BrandId == b.Id)">@b.Name</option>
+                <option value="@b.Value" selected="@(Model.BrandId == Convert.ToInt32(b.Value))">@b.Label</option>
             }
         </select>
 
         <select name="creatorType" class="filter-select">
             <option value="">All Sources</option>
-            <option value="Admin"  selected="@(Model.CreatorType == "Admin")">Admin</option>
+            <option value="Admin" selected="@(Model.CreatorType == "Admin")">Admin</option>
             <option value="Seller" selected="@(Model.CreatorType == "Seller")">Seller</option>
         </select>
 
         <button type="submit" class="btn btn-outline btn-sm">Filter</button>
 
-        @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.Status) ||
-             Model.CategoryId.HasValue || Model.BrandId.HasValue || !string.IsNullOrEmpty(Model.CreatorType))
+        @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.StatusFilter) ||
+                Model.CategoryId.HasValue || Model.BrandId.HasValue || !string.IsNullOrEmpty(Model.CreatorType))
         {
             <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
         }
     </form>
 
-    
+
     @if (!Model.Items.Any())
     {
         <div class="empty-state">
             <div class="empty-icon">
                 <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
             </div>
             <div class="empty-title">No products found</div>
@@ -159,13 +133,27 @@
                 <thead>
                     <tr>
                         <th>Product</th>
-                        <th><a href="@SortLink("name")" class="sort-link">Name @SortIcon("name")</a></th>
+                        <th>
+                            <a href="?search=@Model.Search&status=@Model.StatusFilter&categoryId=@Model.CategoryId&brandId=@Model.BrandId&creatorType=@Model.CreatorType&sortBy=name&sortDirection=@Model.NextDirection("name")&page=1" class="sort-link">
+                                Name @Model.SortIcon("name")
+                            </a>
+                        </th>
                         <th>SKU</th>
                         <th>Category</th>
-                        <th><a href="@SortLink("price")" class="sort-link">Price @SortIcon("price")</a></th>
+                        <th>
+
+
+                            <a href="?search=@Model.Search&status=@Model.StatusFilter&categoryId=@Model.CategoryId&brandId=@Model.BrandId&creatorType=@Model.CreatorType&sortBy=name&sortDirection=@Model.NextDirection("price")&page=1" class="sort-link">
+                                Price @Model.SortIcon("price")
+                            </a>
+                        </th>
                         <th>Status</th>
                         <th>Source</th>
-                        <th><a href="@SortLink("createdat")" class="sort-link">Created @SortIcon("createdat")</a></th>
+                        <th>
+                            <a href="?search=@Model.Search&status=@Model.StatusFilter&categoryId=@Model.CategoryId&brandId=@Model.BrandId&creatorType=@Model.CreatorType&sortBy=name&sortDirection=@Model.NextDirection("createdat")&page=1" class="sort-link">
+                                Created @Model.SortIcon("createdat")
+                            </a>
+                        </th>
                         <th style="width:120px">Actions</th>
                     </tr>
                 </thead>
@@ -173,7 +161,7 @@
                     @foreach (var p in Model.Items)
                     {
                         <tr>
-                            
+
                             <td style="width:48px;padding-right:0">
                                 @if (!string.IsNullOrEmpty(p.PrimaryImageUrl))
                                 {
@@ -184,12 +172,12 @@
                                 {
                                     <div class="prod-thumb prod-thumb--empty">
                                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
                                     </div>
                                 }
                             </td>
-                            
+
                             <td>
                                 <a asp-action="Detail" asp-route-id="@p.Id"
                                    class="tbl-link">@p.Name</a>
@@ -221,22 +209,22 @@
                             <td class="tbl-date">@p.CreatedAt.ToString("dd MMM yyyy")</td>
                             <td>
                                 <div class="row-actions">
-                                    
+
                                     <a asp-action="Detail" asp-route-id="@p.Id"
                                        class="btn btn-ghost btn-xs" title="View">
                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </a>
-                                    
+
                                     <a asp-action="Edit" asp-route-id="@p.Id"
                                        class="btn btn-ghost btn-xs" title="Edit">
                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                     </a>
-                                    
+
                                     @if (p.Status == "PendingApproval")
                                     {
                                         <form asp-action="Approve" asp-route-id="@p.Id"
@@ -244,18 +232,19 @@
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-ghost btn-xs tbl-approve" title="Approve">
                                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                    <polyline points="20 6 9 17 4 12"/>
+                                                    <polyline points="20 6 9 17 4 12" />
                                                 </svg>
                                             </button>
                                         </form>
                                     }
-                                    
+
                                     <button type="button"
                                             class="btn btn-ghost btn-xs tbl-danger"
                                             title="Delete"
                                             onclick="confirmDelete('@p.Id','@Html.Encode(p.Name)')">
                                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <polyline points="3 6 5 6 21 6"/><path stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14H6L5 6m5 0V4h4v2"/>
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14H6L5 6m5 0V4h4v2" />
                                         </svg>
                                     </button>
                                 </div>
@@ -267,15 +256,15 @@
         </div>
 
         <partial name="_Pagination" model="@(new PaginationViewModel
-        {
-            Page       = Model.Page,
-            PageSize   = Model.PageSize,
-            TotalCount = Model.TotalCount,
-            RouteData  = pgRoute,
-            Action     = "Index",
-            Controller = "Products"
-        })" />
-    }
+                                    {
+                                        Page = Model.Page,
+                                        PageSize = Model.PageSize,
+                                        TotalCount = Model.TotalCount,
+                                        RouteData = Model.RouteData,
+                                        Action = "Index",
+                                        Controller = "Products"
+                                    })" />
+        }
 </div>
 
 
@@ -306,7 +295,9 @@
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn btn-outline"
-                        onclick="document.getElementById('rejectModal').style.display='none'">Cancel</button>
+                        onclick="document.getElementById('rejectModal').style.display='none'">
+                    Cancel
+                </button>
                 <button type="submit" class="btn btn-danger">Reject</button>
             </div>
         </form>
@@ -314,24 +305,24 @@
 </div>
 
 @section Scripts {
-<script>
-function confirmDelete(id, name) {
-    document.getElementById('delModalDesc').textContent = `Delete "${name}"? This cannot be undone.`;
-    document.getElementById('delForm').action = `/Products/${id}/Delete`;
-    document.getElementById('delModal').style.display = 'flex';
-}
-function closeDelModal(e) {
-    if (e.target === document.getElementById('delModal'))
-        document.getElementById('delModal').style.display = 'none';
-}
-function openReject(id) {
-    document.getElementById('rejectForm').action = `/Products/${id}/Reject`;
-    document.getElementById('rejectReason').value = '';
-    document.getElementById('rejectModal').style.display = 'flex';
-}
-function closeRejectModal(e) {
-    if (e.target === document.getElementById('rejectModal'))
-        document.getElementById('rejectModal').style.display = 'none';
-}
-</script>
+    <script>
+        function confirmDelete(id, name) {
+            document.getElementById('delModalDesc').textContent = `Delete "${name}"? This cannot be undone.`;
+            document.getElementById('delForm').action = `/Products/${id}/Delete`;
+            document.getElementById('delModal').style.display = 'flex';
+        }
+        function closeDelModal(e) {
+            if (e.target === document.getElementById('delModal'))
+                document.getElementById('delModal').style.display = 'none';
+        }
+        function openReject(id) {
+            document.getElementById('rejectForm').action = `/Products/${id}/Reject`;
+            document.getElementById('rejectReason').value = '';
+            document.getElementById('rejectModal').style.display = 'flex';
+        }
+        function closeRejectModal(e) {
+            if (e.target === document.getElementById('rejectModal'))
+                document.getElementById('rejectModal').style.display = 'none';
+        }
+    </script>
 }

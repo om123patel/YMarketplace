@@ -1,3 +1,4 @@
+@using AdminPanel.ViewModels.Common
 @using AdminPanel.ViewModels.Products
 @model SellerProductListViewModel
 @{
@@ -7,7 +8,7 @@
     {
         var dir = (Model.SortBy == col && Model.SortDirection == "asc") ? "desc" : "asc";
         return $"?search={Uri.EscapeDataString(Model.Search ?? "")}" +
-               $"&status={Uri.EscapeDataString(Model.Status ?? "")}" +
+               $"&status={Uri.EscapeDataString(Model.StatusFilter ?? "")}" +
                $"&categoryId={Model.CategoryId}" +
                $"&sortBy={col}&sortDirection={dir}&page=1";
     }
@@ -21,7 +22,7 @@
     var pgRoute = new Dictionary<string, string?>
     {
         ["search"]        = Model.Search,
-        ["status"]        = Model.Status,
+        ["status"]        = Model.StatusFilter,
         ["categoryId"]    = Model.CategoryId?.ToString(),
         ["sortBy"]        = Model.SortBy,
         ["sortDirection"] = Model.SortDirection
@@ -77,7 +78,7 @@
 @{
     var pendingCount = Model.Items.Count(x => x.Status == "PendingApproval");
 }
-@if (pendingCount > 0 && string.IsNullOrEmpty(Model.Status))
+@if (pendingCount > 0 && string.IsNullOrEmpty(Model.StatusFilter))
 {
     <div class="alert alert-amber" id="alert-banner">
         <div class="alert-icon">⏳</div>
@@ -108,7 +109,7 @@
             <option value="">All Statuses</option>
             @foreach (var s in new[] { "PendingApproval", "Active", "Rejected", "Archived", "Draft" })
             {
-                <option value="@s" selected="@(Model.Status == s)">@StatusLabel(s)</option>
+                <option value="@s" selected="@(Model.StatusFilter == s)">@StatusLabel(s)</option>
             }
         </select>
 
@@ -116,13 +117,13 @@
             <option value="">All Categories</option>
             @foreach (var c in Model.Categories)
             {
-                <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">@c.Name</option>
+                <option value="@c.Value" selected="@(Model.CategoryId?.ToString() == c.Value)">@c.Label</option>
             }
         </select>
 
         <button type="submit" class="btn btn-outline btn-sm">Filter</button>
 
-        @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.Status) || Model.CategoryId.HasValue)
+        @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.StatusFilter) || Model.CategoryId.HasValue)
         {
             <a asp-action="Seller" class="btn btn-ghost btn-sm">Clear</a>
         }
@@ -238,15 +239,17 @@
             </table>
         </div>
 
-        <partial name="_Pagination" model="@(new PaginationViewModel
-        {
-            Page       = Model.Page,
-            PageSize   = Model.PageSize,
-            TotalCount = Model.TotalCount,
-            RouteData  = pgRoute,
-            Action     = "Seller",
-            Controller = "Products"
-        })" />
+       
+
+    <partial name="_Pagination" model="@(new PaginationViewModel
+                                {
+                                    Page = Model.Page,
+                                    PageSize = Model.PageSize,
+                                    TotalCount = Model.TotalCount,
+                                    RouteData = Model.RouteData,
+                                    Action = "Seller",
+                                    Controller = "Products"
+                                })" />
     }
 </div>
 

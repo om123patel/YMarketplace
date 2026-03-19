@@ -2,22 +2,13 @@
 @model CategoryListViewModel
 @{
     ViewData["Title"] = "Categories";
-    string SortLink(string col)
-    {
-        var dir = (Model.SortBy == col && Model.SortDirection == "asc") ? "desc" : "asc";
-        return $"?search={Uri.EscapeDataString(Model.Search ?? "")}&status={Model.StatusFilter ?? ""}&sortBy={col}&sortDirection={dir}";
-    }
-    string SortIcon(string col)
-    {
-        if (Model.SortBy != col) return "↕";
-        return Model.SortDirection == "asc" ? "↑" : "↓";
-    }
+
 }
 
 <div class="pg-bar">
     <div>
         <h1 class="pg-title">Categories</h1>
-        <p class="pg-sub">@Model.TotalCount total &middot; @Model.ActiveCount active &middot; @Model.InactiveCount inactive</p>
+        @* <p class="pg-sub">@Model.TotalCount total &middot; @Model.ActiveCount active &middot; @Model.InactiveCount inactive</p> *@
     </div>
     <div class="pg-actions">
         <a asp-action="Create" class="btn btn-primary">
@@ -47,10 +38,10 @@
         <div class="tab-group">
             <a href="?search=@Uri.EscapeDataString(Model.Search ?? "")&sortBy=@Model.SortBy&sortDirection=@Model.SortDirection"
                class="tab @(string.IsNullOrEmpty(Model.StatusFilter) ? "on" : "")">All <span class="tab-count">@Model.TotalCount</span></a>
-            <a href="?search=@Uri.EscapeDataString(Model.Search ?? "")&status=active&sortBy=@Model.SortBy&sortDirection=@Model.SortDirection"
+            @* <a href="?search=@Uri.EscapeDataString(Model.Search ?? "")&status=active&sortBy=@Model.SortBy&sortDirection=@Model.SortDirection"
                class="tab @(Model.StatusFilter == "active" ? "on" : "")">Active <span class="tab-count">@Model.ActiveCount</span></a>
             <a href="?search=@Uri.EscapeDataString(Model.Search ?? "")&status=inactive&sortBy=@Model.SortBy&sortDirection=@Model.SortDirection"
-               class="tab @(Model.StatusFilter == "inactive" ? "on" : "")">Inactive <span class="tab-count">@Model.InactiveCount</span></a>
+               class="tab @(Model.StatusFilter == "inactive" ? "on" : "")">Inactive <span class="tab-count">@Model.InactiveCount</span></a> *@
         </div>
         <div class="f-right">
             <button type="submit" class="btn btn-outline btn-sm">Search</button>
@@ -76,10 +67,26 @@
             <table>
                 <thead>
                     <tr>
-                        <th><a href="@SortLink("name")" class="sort-link">Name @SortIcon("name")</a></th>
+                        <th>
+                            <a href="?search=@Model.Search&status=@Model.StatusFilter&sortBy=name&sortDirection=@Model.NextDirection("name")&page=1" class="sort-link">
+                                Name @Model.SortIcon("name")
+                            </a>
+                        </th>
                         <th>Parent</th>
-                        <th><a href="@SortLink("products")" class="sort-link">Products @SortIcon("products")</a></th>
-                        <th><a href="@SortLink("sort")" class="sort-link">Order @SortIcon("sort")</a></th>
+                        <th>
+                            <a href="?search=@Model.Search&status=@Model.StatusFilter&sortBy=name&sortDirection=@Model.NextDirection("products")&page=1" class="sort-link">
+                                Products @Model.SortIcon("products")
+                            </a>
+
+
+                        </th>
+                        <th>
+                            <a href="?search=@Model.Search&status=@Model.StatusFilter&sortBy=name&sortDirection=@Model.NextDirection("sort")&page=1" class="sort-link">
+                                Order @Model.SortIcon("sort")
+                            </a>
+                        </th>
+
+                        
                         <th>Status</th>
                         <th style="width:100px">Actions</th>
                     </tr>

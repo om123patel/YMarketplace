@@ -1,6 +1,6 @@
 ﻿using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
-using AdminPanel.ViewModels.Auth;
+using AdminPanel.ViewModels.Seller;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,57 +9,48 @@ namespace AdminPanel.Controllers
     [Authorize(Policy = "AdminOnly")]
     public class SellersController : Controller
     {
-        private readonly IApiClient _api;
+        private readonly ISellerApiClient _sellers;
         private readonly AuthTokenService _tokens;
-
-        public SellersController(IApiClient api, AuthTokenService tokens)
-        {
-            _api = api;
-            _tokens = tokens;
-        }
+        public SellersController(ISellerApiClient sellers, AuthTokenService tokens)
+        { _sellers = sellers; _tokens = tokens; }
 
         // ══════════════════════════════════════════════════════
         // GET /Sellers
         // ══════════════════════════════════════════════════════
         public async Task<IActionResult> Index(
-            string? search,
-            string? sellerStatus,
-            string sortBy = "createdat",
-            string sortDirection = "desc",
-            int page = 1,
-            CancellationToken ct = default)
+             string? search, string? sellerStatus,
+             string sortBy = "createdat", string sortDirection = "desc",
+             int page = 1, CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
 
-            // Fetch list + pending count in parallel
-            var listTask = _api.GetSellersAsync(token, page, 20,
-                                search, sellerStatus, sortBy, sortDirection);
-            var pendingTask = _api.GetSellersAsync(token, 1, 1,
-                                null, "PendingApproval");
+            var listTask = _sellers.GetSellersAsync(token, page, 20,
+                                  search, sellerStatus, sortBy, sortDirection);
+            var pendingTask = _sellers.GetSellersAsync(token, 1, 1,
+                                  null, "PendingApproval");
 
             await Task.WhenAll(listTask, pendingTask);
 
             var result = await listTask;
             var vm = new SellerListViewModel
             {
-                Items = result?.Data?.Items
-                    .Select(s => new SellerListItem
-                    {
-                        Id = s.Id,
-                        UserId = s.UserId,
-                        FullName = s.FullName,
-                        Email = s.Email,
-                        AvatarUrl = s.AvatarUrl,
-                        BusinessName = s.BusinessName,
-                        City = s.City,
-                        Country = s.Country,
-                        SellerStatus = s.SellerStatus,
-                        TotalProducts = s.TotalProducts,
-                        TotalOrders = s.TotalOrders,
-                        TotalRevenue = s.TotalRevenue,
-                        Rating = s.Rating,
-                        CreatedAt = s.CreatedAt
-                    }).ToList() ?? [],
+                Items = result?.Data?.Items.Select(s => new SellerListItem
+                {
+                    Id = s.Id,
+                    UserId = s.UserId,
+                    FullName = s.FullName,
+                    Email = s.Email,
+                    AvatarUrl = s.AvatarUrl,
+                    BusinessName = s.BusinessName,
+                    City = s.City,
+                    Country = s.Country,
+                    SellerStatus = s.SellerStatus,
+                    TotalProducts = s.TotalProducts,
+                    TotalOrders = s.TotalOrders,
+                    TotalRevenue = s.TotalRevenue,
+                    Rating = s.Rating,
+                    CreatedAt = s.CreatedAt
+                }).ToList() ?? [],
                 Page = result?.Data?.Page ?? page,
                 PageSize = result?.Data?.PageSize ?? 20,
                 TotalCount = result?.Data?.TotalCount ?? 0,
@@ -69,9 +60,10 @@ namespace AdminPanel.Controllers
                 SortDirection = sortDirection,
                 PendingCount = (await pendingTask)?.Data?.TotalCount ?? 0
             };
-
+            vm.BuildRouteData(new() { ["sellerStatus"] = sellerStatus });
             return View(vm);
         }
+
 
         // ══════════════════════════════════════════════════════
         // GET /Sellers/{id}
@@ -81,7 +73,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetSellerByIdAsync(token, id);
+            var result = await _sellers.GetSellerByIdAsync(token, id);
 
             if (result?.Data is null)
             {
@@ -134,7 +126,7 @@ namespace AdminPanel.Controllers
             Guid id, string? returnUrl, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.ApproveSellerAsync(token, id);
+            var result = await _sellers.ApproveSellerAsync(token, id);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -160,7 +152,7 @@ namespace AdminPanel.Controllers
             }
 
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.RejectSellerAsync(token, id, reason);
+            var result = await _sellers.RejectSellerAsync(token, id, reason);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -186,7 +178,7 @@ namespace AdminPanel.Controllers
             }
 
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.SuspendSellerAsync(token, id, reason);
+            var result = await _sellers.SuspendSellerAsync(token, id, reason);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true
@@ -206,7 +198,7 @@ namespace AdminPanel.Controllers
             Guid id, string? returnUrl, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.ActivateSellerAsync(token, id);
+            var result = await _sellers.ActivateSellerAsync(token, id);
 
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true

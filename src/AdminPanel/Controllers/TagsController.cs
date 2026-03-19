@@ -10,17 +10,20 @@ namespace AdminPanel.Controllers
     [Authorize(Policy = "AdminOnly")]
     public class TagsController : Controller
     {
-        private readonly IApiClient _api;
+        private readonly ITagApiClient _tags;
         private readonly AuthTokenService _tokens;
+        public TagsController(ITagApiClient tags, AuthTokenService tokens)
+        { _tags = tags; _tokens = tokens; }
 
-        public TagsController(IApiClient api, AuthTokenService tokens) { _api = api; _tokens = tokens; }
-
-        public async Task<IActionResult> Index(string? search, string sortBy = "name", string sortDirection = "asc", CancellationToken ct = default)
+        public async Task<IActionResult> Index(
+             string? search,
+             string sortBy = "name", string sortDirection = "asc",
+             CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetTagsAsync(token);
-            var q = (result?.Data ?? []).AsEnumerable();
+            var result = await _tags.GetTagsAsync(token);
 
+            var q = (result?.Data ?? []).AsEnumerable();
             if (!string.IsNullOrWhiteSpace(search))
                 q = q.Where(t => t.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
                                || t.Slug.Contains(search, StringComparison.OrdinalIgnoreCase));
@@ -44,8 +47,20 @@ namespace AdminPanel.Controllers
                 _ => items.OrderBy(i => i.Name).ToList()
             };
 
-            return View(new TagListViewModel { Items = items, Search = search, SortBy = sortBy, SortDirection = sortDirection });
+            var vm = new TagListViewModel
+            {
+                Items = items,
+                TotalCount = items.Count,
+                Page = 1,
+                PageSize = items.Count == 0 ? 20 : items.Count,
+                Search = search,
+                SortBy = sortBy,
+                SortDirection = sortDirection
+            };
+            vm.BuildRouteData();
+            return View(vm);
         }
+
 
         [HttpGet]
         public IActionResult Create() => View(new CreateTagViewModel());
@@ -55,7 +70,7 @@ namespace AdminPanel.Controllers
         {
             if (!ModelState.IsValid) return View(vm);
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.CreateTagAsync(token, new CreateTagRequest { Name = vm.Name, Slug = vm.Slug });
+            var result = await _tags.CreateTagAsync(token, new CreateTagRequest { Name = vm.Name, Slug = vm.Slug });
             if (result?.Success != true) { ModelState.AddModelError("", result?.Error ?? "Failed to create tag."); return View(vm); }
             TempData["Success"] = $"Tag \"{vm.Name}\" created.";
             return RedirectToAction(nameof(Index));
@@ -65,7 +80,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetTagByIdAsync(token, id);
+            var result = await _tags.GetTagByIdAsync(token, id);
             if (result?.Data is null) { TempData["Error"] = "Tag not found."; return RedirectToAction(nameof(Index)); }
             var t = result.Data;
             return View(new EditTagViewModel { Id = t.Id, Name = t.Name, Slug = t.Slug, OriginalName = t.Name, ProductCount = t.ProductCount, CreatedAt = t.CreatedAt });
@@ -76,7 +91,7 @@ namespace AdminPanel.Controllers
         {
             if (!ModelState.IsValid) return View(vm);
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.UpdateTagAsync(token, id, new UpdateTagRequest { Name = vm.Name, Slug = vm.Slug });
+            var result = await _tags.UpdateTagAsync(token, id, new UpdateTagRequest { Name = vm.Name, Slug = vm.Slug });
             if (result?.Success != true) { ModelState.AddModelError("", result?.Error ?? "Failed to update tag."); return View(vm); }
             TempData["Success"] = $"Tag \"{vm.Name}\" updated.";
             return RedirectToAction(nameof(Index));
@@ -86,7 +101,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.DeleteTagAsync(token, id);
+            var result = await _tags.DeleteTagAsync(token, id);
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true ? "Tag deleted." : result?.Error ?? "Cannot delete — tag may be in use.";
             return RedirectToAction(nameof(Index));

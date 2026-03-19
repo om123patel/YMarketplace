@@ -12,17 +12,20 @@ namespace AdminPanel.Controllers
     [Authorize(Policy = "AdminOnly")]
     public class AttributesController : Controller
     {
-        private readonly IApiClient _api;
+        private readonly IAttributeApiClient _attributes;
         private readonly AuthTokenService _tokens;
+        public AttributesController(IAttributeApiClient attributes, AuthTokenService tokens)
+        { _attributes = attributes; _tokens = tokens; }
 
-        public AttributesController(IApiClient api, AuthTokenService tokens) { _api = api; _tokens = tokens; }
-
-        public async Task<IActionResult> Index(string? search, string? status, string sortBy = "name", string sortDirection = "asc", CancellationToken ct = default)
+        public async Task<IActionResult> Index(
+            string? search, string? status,
+            string sortBy = "name", string sortDirection = "asc",
+            CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetAttributeTemplatesAsync(token);
-            var q = (result?.Data ?? []).AsEnumerable();
+            var result = await _attributes.GetAttributeTemplatesAsync(token);
 
+            var q = (result?.Data ?? []).AsEnumerable();
             if (!string.IsNullOrWhiteSpace(search))
                 q = q.Where(a => a.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
                                || a.CategoryName.Contains(search, StringComparison.OrdinalIgnoreCase));
@@ -53,8 +56,21 @@ namespace AdminPanel.Controllers
                 _ => items.OrderBy(i => i.Name).ToList()
             };
 
-            return View(new AttributeListViewModel { Items = items, Search = search, StatusFilter = status, SortBy = sortBy, SortDirection = sortDirection });
+            var vm = new AttributeListViewModel
+            {
+                Items = items,
+                TotalCount = items.Count,
+                Page = 1,
+                PageSize = items.Count == 0 ? 20 : items.Count,
+                Search = search,
+                StatusFilter = status,
+                SortBy = sortBy,
+                SortDirection = sortDirection
+            };
+            vm.BuildRouteData();
+            return View(vm);
         }
+
 
         [HttpGet]
         public async Task<IActionResult> Create(CancellationToken ct)
@@ -71,7 +87,7 @@ namespace AdminPanel.Controllers
             if (!ModelState.IsValid) { await LoadCategories(vm.Categories); return View(vm); }
 
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.CreateAttributeTemplateAsync(token, new CreateAttributeTemplateRequest
+            var result = await _attributes.CreateAttributeTemplateAsync(token, new CreateAttributeTemplateRequest
             {
                 CategoryId = vm.CategoryId,
                 Name = vm.Name,
@@ -94,7 +110,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetAttributeTemplateByIdAsync(token, id);
+            var result = await _attributes.GetAttributeTemplateByIdAsync(token, id);
             if (result?.Data is null) { TempData["Error"] = "Template not found."; return RedirectToAction(nameof(Index)); }
             var a = result.Data;
             var vm = new EditAttributeTemplateViewModel
@@ -127,7 +143,7 @@ namespace AdminPanel.Controllers
             if (!ModelState.IsValid) { await LoadCategories(vm.Categories); return View(vm); }
 
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.UpdateAttributeTemplateAsync(token, id, new UpdateAttributeTemplateRequest
+            var result = await _attributes.UpdateAttributeTemplateAsync(token, id, new UpdateAttributeTemplateRequest
             {
                 Name = vm.Name,
                 IsActive = vm.IsActive,
@@ -150,7 +166,7 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.DeleteAttributeTemplateAsync(token, id);
+            var result = await _attributes.DeleteAttributeTemplateAsync(token, id);
             TempData[result?.Success == true ? "Success" : "Error"] =
                 result?.Success == true ? "Template deleted." : result?.Error ?? "Failed to delete template.";
             return RedirectToAction(nameof(Index));
@@ -163,7 +179,7 @@ namespace AdminPanel.Controllers
         private async Task LoadCategories(List<CategoryOption> list)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _api.GetCategoriesAsync(token);
+            var result = await _attributes.GetCategoriesAsync(token);
             list.AddRange(result?.Data?.Select(c => new CategoryOption { Id = c.Id, Name = c.Name }) ?? []);
         }
 

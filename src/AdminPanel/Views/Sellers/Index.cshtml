@@ -1,4 +1,5 @@
-@using AdminPanel.ViewModels.Auth
+@using AdminPanel.ViewModels.Common
+@using AdminPanel.ViewModels.Seller
 @model SellerListViewModel
 @{
     ViewData["Title"] = "Sellers";
@@ -194,15 +195,17 @@
             </table>
         </div>
 
-        <partial name="_Pagination" model="@(new AdminPanel.ViewModels.Products.PaginationViewModel
-        {
-            Page       = Model.Page,
-            PageSize   = Model.PageSize,
-            TotalCount = Model.TotalCount,
-            RouteData  = pgRoute,
-            Action     = "Index",
-            Controller = "Sellers"
-        })" />
+       
+
+    <partial name="_Pagination" model="@(new PaginationViewModel
+                                {
+                                    Page = Model.Page,
+                                    PageSize = Model.PageSize,
+                                    TotalCount = Model.TotalCount,
+                                    RouteData = Model.RouteData,
+                                    Action = "Index",
+                                    Controller = "Sellers"
+                                })" />
     }
 </div>
 

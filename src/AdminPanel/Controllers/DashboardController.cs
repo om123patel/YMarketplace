@@ -10,12 +10,12 @@ namespace AdminPanel.Controllers
     [Authorize(Policy = "AdminOnly")]
     public class DashboardController : Controller
     {
-        private readonly IApiClient _api;
+        private readonly IProductApiClient _products;
         private readonly AuthTokenService _tokenService;
 
-        public DashboardController(IApiClient api, AuthTokenService tokenService)
+        public DashboardController(IProductApiClient products, AuthTokenService tokenService)
         {
-            _api = api;
+            _products = products;
             _tokenService = tokenService;
         }
 
@@ -24,25 +24,28 @@ namespace AdminPanel.Controllers
             var token = _tokenService.GetAccessToken();
             if (token is null) return RedirectToAction("Login", "Auth");
 
-            // Get pending approvals count from products
-            var products = await _api.GetProductsAsync(
+            var pendingTask = _products.GetProductsAsync(
                 token, page: 1, pageSize: 1,
-                search: null, status: "PendingApproval", categoryId: null);
+                status: "PendingApproval");
+
+            var activeTask = _products.GetProductsAsync(
+                token, page: 1, pageSize: 1,
+                status: "Active");
+
+            await Task.WhenAll(pendingTask, activeTask);
 
             var vm = new DashboardViewModel
             {
-                // Real data from API — these numbers would come from
-                // a dedicated dashboard/stats endpoint you'd add later
-                PendingApprovals = products?.Data?.TotalCount ?? 0,
-
-                // Placeholder stats until dedicated stats endpoint is added
-                TotalRevenue = 482000,
-                TotalOrders = 1284,
-                ActiveProducts = products?.Data?.TotalCount ?? 0,
-                ActiveSellers = 218,
+                PendingApprovals = (await pendingTask)?.Data?.TotalCount ?? 0,
+                ActiveProducts = (await activeTask)?.Data?.TotalCount ?? 0,
+                // Stubs until Stats endpoint is built
+                TotalRevenue = 0,
+                TotalOrders = 0,
+                ActiveSellers = 0
             };
 
             return View(vm);
         }
+
     }
 }
