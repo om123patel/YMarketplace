@@ -1,4 +1,6 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Categories;
+using Catalog.Application.DTOs.Tags;
+using Catalog.Application.Services;
 using Catalog.Application.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +17,15 @@ namespace Web.API.Controllers.Admin
         public AdminTagsController(ITagService tagService)
         {
             _tagService = tagService;
+        }
+
+        [HttpGet("GetPaged")]
+        public async Task<IActionResult> GetPaged(
+           [FromQuery] TagFilterRequest filter,
+           CancellationToken ct)
+        {
+            var result = await _tagService.GetPagedAsync(filter, ct);
+            return HandleResult(result);
         }
 
         // GET api/admin/tags

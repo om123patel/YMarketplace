@@ -2,6 +2,7 @@ using AdminPanel.Dtos.Brands;
 using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
 using AdminPanel.ViewModels.Brands;
+using AdminPanel.ViewModels.Categories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,48 +19,45 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Index(
             string? search, string? status,
             string sortBy = "name", string sortDirection = "asc",
+            int page = 1, int pageSize = 10,
             CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _brands.GetBrandsAsync(token);
-            var all = result?.Data ?? [];
+            var result = await _brands.GetPaged(token,
+                 page, pageSize, search, status, sortBy, sortDirection);
 
-            var q = all.AsEnumerable();
-            if (!string.IsNullOrWhiteSpace(search))
-                q = q.Where(b => b.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                               || b.Slug.Contains(search, StringComparison.OrdinalIgnoreCase));
-            if (status == "active") q = q.Where(b => b.IsActive);
-            if (status == "inactive") q = q.Where(b => !b.IsActive);
+            var data = result?.Data;
+            List<BrandItem> items;
 
-            var items = q.Select(b => new BrandItem
+            if (data?.Items?.Any() == true)
             {
-                Id = b.Id,
-                Name = b.Name,
-                Slug = b.Slug,
-                Description = b.Description,
-                LogoUrl = b.LogoUrl,
-                WebsiteUrl = b.WebsiteUrl,
-                IsActive = b.IsActive,
-                ProductCount = b.ProductCount,
-                CreatedAt = b.CreatedAt
-            }).ToList();
-
-            items = (sortBy, sortDirection) switch
+                items = data.Items.Select(b => new BrandItem
+                {
+                    Id = b.Id,
+                    Name = b.Name,
+                    Slug = b.Slug,
+                    Description = b.Description,
+                    LogoUrl = b.LogoUrl,
+                    WebsiteUrl = b.WebsiteUrl,
+                    IsActive = b.IsActive,
+                    ProductCount = b.ProductCount,
+                    CreatedAt = b.CreatedAt
+                }).ToList();
+            }
+            else
             {
-                ("name", "desc") => items.OrderByDescending(i => i.Name).ToList(),
-                ("products", "asc") => items.OrderBy(i => i.ProductCount).ToList(),
-                ("products", "desc") => items.OrderByDescending(i => i.ProductCount).ToList(),
-                ("created", "asc") => items.OrderBy(i => i.CreatedAt).ToList(),
-                ("created", "desc") => items.OrderByDescending(i => i.CreatedAt).ToList(),
-                _ => items.OrderBy(i => i.Name).ToList()
-            };
+                items = new List<BrandItem>();
+            }
+            
+
+           
 
             var vm = new BrandListViewModel
             {
                 Items = items,
-                TotalCount = items.Count,
-                Page = 1,
-                PageSize = items.Count == 0 ? 20 : items.Count,
+                TotalCount = data?.TotalCount ?? 0,
+                Page = data?.Page ?? page,
+                PageSize = data?.PageSize ?? pageSize,
                 Search = search,
                 StatusFilter = status,
                 SortBy = sortBy,

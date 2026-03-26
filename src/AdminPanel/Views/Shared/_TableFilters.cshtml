@@ -1,0 +1,282 @@
+@using AdminPanel.ViewModels.Grid
+@model TableFilterModel
+
+@{
+    var panelClass = "tf-panel" + (Model.HasActiveFilters || Model.StartOpen ? " tf-panel--open" : "");
+}
+
+<div class="@panelClass" id="tf-panel-@Model.FormId" data-tf-panel>
+    <div class="tf-panel-inner">
+
+        <div class="tf-grid">
+            @foreach (var col in Model.Columns)
+            {
+                var colClass = "tf-col" + (col.IsActive ? " tf-col--active" : "");
+                <div class="@colClass">
+                    <label class="tf-label">@col.Label</label>
+
+                    @switch (col.Type)
+                    {
+                        case ColumnFilterType.Text:
+                            {
+                                var inputClass = "tf-input" + (col.IsActive ? " tf-ctrl--active" : "");
+                                <div class="tf-ctrl-wrap">
+                                    <svg class="tf-ctrl-ico" width="11" height="11" fill="none"
+                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    </svg>
+                                    <input type="text" class="@inputClass"
+                                           name="@col.ParamName"
+                                           value="@col.CurrentValue"
+                                           placeholder="@col.Placeholder"
+                                           autocomplete="off"
+                                           data-tf-text />
+                                    @if (col.IsActive)
+                                    {
+                                        <button type="button" class="tf-x"
+                                                data-tf-clear-input
+                                                aria-label="Clear @col.Label">
+                                            ×
+                                        </button>
+                                    }
+                                </div>
+                                break;
+                            }
+
+                        case ColumnFilterType.Select:
+                            {
+                                var selClass = "tf-select" + (col.IsActive ? " tf-ctrl--active" : "");
+                                <select class="@selClass" name="@col.ParamName" data-tf-select>
+                                    <option value="">@(col.Placeholder ?? "All")</option>
+                                    @foreach (var opt in col.Options)
+                                    {
+                                        if (col.CurrentValue == opt.Value)
+                                        {
+                                            <option value="@opt.Value" selected>@opt.Label</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@opt.Value">@opt.Label</option>
+                                        }
+                                    }
+                                </select>
+                                break;
+                            }
+
+                        
+                        case ColumnFilterType.Radio:
+                            {
+                                <div class="tf-radio-group" data-tf-radio>
+                                    @foreach (var opt in col.Options)
+                                    {
+                                        var radioId = $"tf-{col.ParamName}-{opt.Value}";
+                                        var isChecked = col.CurrentValue == opt.Value
+                                        || (string.IsNullOrEmpty(col.CurrentValue)
+                                        && string.IsNullOrEmpty(opt.Value));
+                                        var radioLblClass = "tf-radio-label" + (isChecked ? " tf-radio-label--on" : "");
+                                        <label class="@radioLblClass" for="@radioId">
+                                            @if (isChecked)
+                                            {
+                                                <input type="radio" id="@radioId"
+                                                       name="@col.ParamName" value="@opt.Value"
+                                                       class="tf-radio-input" checked />
+                                            }
+                                            else
+                                            {
+                                                <input type="radio" id="@radioId"
+                                                       name="@col.ParamName" value="@opt.Value"
+                                                       class="tf-radio-input" />
+                                            }
+                                            @if (!string.IsNullOrEmpty(opt.Color))
+                                            {
+                                                <span class="filter-dot @opt.Color" aria-hidden="true"></span>
+                                            }
+                                            @opt.Label
+                                        </label>
+                                    }
+                                </div>
+                                break;
+                            }
+
+                        
+                        case ColumnFilterType.Checkbox:
+                            {
+                                <input type="hidden" name="@col.ParamName"
+                                       value="@col.CurrentValue" data-tf-checkbox-hidden />
+                                <div class="tf-checkbox-group" data-tf-checkbox>
+                                    @foreach (var opt in col.Options)
+                                    {
+                                        var cbId = $"tf-{col.ParamName}-{opt.Value}";
+                                        var cbOn = col.CheckedValues.Contains(opt.Value);
+                                        var cbClass = "tf-check-label" + (cbOn ? " tf-check-label--on" : "");
+                                        <label class="@cbClass" for="@cbId">
+                                            @if (cbOn)
+                                            {
+                                                <input type="checkbox" id="@cbId"
+                                                       value="@opt.Value"
+                                                       class="tf-check-input" checked />
+                                            }
+                                            else
+                                            {
+                                                <input type="checkbox" id="@cbId"
+                                                       value="@opt.Value"
+                                                       class="tf-check-input" />
+                                            }
+                                            @if (!string.IsNullOrEmpty(opt.Color))
+                                            {
+                                                <span class="filter-dot @opt.Color" aria-hidden="true"></span>
+                                            }
+                                            @opt.Label
+                                        </label>
+                                    }
+                                </div>
+                                break;
+                            }
+
+                        
+                        case ColumnFilterType.Date:
+                            {
+                                var dtClass = "tf-date" + (col.IsActive ? " tf-ctrl--active" : "");
+                                <input type="date" class="@dtClass"
+                                       name="@col.ParamName"
+                                       value="@col.CurrentValue"
+                                       data-tf-text />
+                                break;
+                            }
+
+                        
+                        case ColumnFilterType.DateRange:
+                            {
+                                var fromClass = "tf-date" + (!string.IsNullOrEmpty(col.CurrentValue) ? " tf-ctrl--active" : "");
+                                var toClass = "tf-date" + (!string.IsNullOrEmpty(col.CurrentValueTo) ? " tf-ctrl--active" : "");
+                                <div class="tf-date-range">
+                                    <input type="date" class="@fromClass"
+                                           name="@col.ParamName"
+                                           value="@col.CurrentValue"
+                                           data-tf-text />
+                                    <span class="tf-date-sep" aria-hidden="true">→</span>
+                                    <input type="date" class="@toClass"
+                                           name="@col.DateToParamName"
+                                           value="@col.CurrentValueTo"
+                                           data-tf-text />
+                                </div>
+                                break;
+                            }
+
+                        case ColumnFilterType.NumberComparison:
+                            {
+                                var isBetween = col.CurrentOp == "between";
+                                var hasUnit = !string.IsNullOrEmpty(col.Unit);
+                                var valClass = "tf-input"
+                                + (col.IsActive ? " tf-ctrl--active" : "")
+                                + (hasUnit ? " tf-input--unit" : "");
+                                var maxClass = "tf-input"
+                                + (!string.IsNullOrEmpty(col.CurrentValueMax) ? " tf-ctrl--active" : "")
+                                + (hasUnit ? " tf-input--unit" : "");
+                                var toWrpClass = "tf-numcmp-to" + (isBetween ? "" : " tf-numcmp-to--hidden");
+
+                                <div class="tf-numcmp" data-tf-numop>
+
+                                    <select class="tf-select tf-numcmp-op"
+                                            name="@col.OpParamName"
+                                            data-tf-op-select>
+                                        @if (col.CurrentOp == "gte")
+                                        {
+                                            <option value="gte" selected>≥</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="gte">≥</option>
+                                        }
+                                        @if (col.CurrentOp == "lte")
+                                        {
+                                            <option value="lte" selected>≤</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="lte">≤</option>
+                                        }
+                                        @if (col.CurrentOp == "eq")
+                                        {
+                                            <option value="eq" selected>=</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="eq">=</option>
+                                        }
+                                        @if (col.CurrentOp == "between")
+                                        {
+                                            <option value="between" selected>Between</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="between">Between</option>
+                                        }
+                                    </select>
+
+                                    <div class="tf-ctrl-wrap tf-numcmp-val">
+                                        @if (hasUnit)
+                                        {
+                                            <span class="tf-ctrl-ico tf-unit-ico">@col.Unit</span>
+                                        }
+                                        <input type="number" class="@valClass"
+                                               name="@col.ParamName"
+                                               value="@col.CurrentValue"
+                                               placeholder="@(col.Placeholder ?? "0")"
+                                               min="0" step="any"
+                                               data-tf-text />
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(col.NumberToParamName))
+                                    {
+                                        <div class="@toWrpClass" data-tf-between-field>
+                                            <span class="tf-date-sep" aria-hidden="true">–</span>
+                                            <div class="tf-ctrl-wrap">
+                                                @if (hasUnit)
+                                                {
+                                                    <span class="tf-ctrl-ico tf-unit-ico">@col.Unit</span>
+                                                }
+                                                <input type="number" class="@maxClass"
+                                                       name="@col.NumberToParamName"
+                                                       value="@col.CurrentValueMax"
+                                                       placeholder="@(col.Placeholder ?? "0")"
+                                                       min="0" step="any"
+                                                       data-tf-text />
+                                            </div>
+                                        </div>
+                                    }
+
+                                </div>
+                                break;
+                            }
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="tf-footer">
+            <span class="tf-summary">
+                @if (Model.HasActiveFilters)
+                {
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24"
+                         stroke="var(--c-indigo)" stroke-width="2.5" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707
+                                     L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017
+                                     21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+                    </svg>
+                    <span>@Model.ActiveCount filter@(Model.ActiveCount == 1 ? "" : "s") active</span>
+                }
+            </span>
+            <div class="tf-footer-btns">
+                @if (Model.HasActiveFilters)
+                {
+                    <a href="@Model.ClearAllUrl" class="btn btn-ghost btn-sm">Clear all</a>
+                }
+                <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+            </div>
+        </div>
+
+    </div>
+</div>

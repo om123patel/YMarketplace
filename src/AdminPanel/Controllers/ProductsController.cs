@@ -2,6 +2,7 @@ using AdminPanel.Dtos.Products;
 using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
 using AdminPanel.ViewModels.Common;
+using AdminPanel.ViewModels.Grid;
 using AdminPanel.ViewModels.Products;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -34,60 +35,105 @@ namespace AdminPanel.Controllers
 
         [HttpGet("")]
         public async Task<IActionResult> Index(
-    string? search, string? status,
-    int? categoryId, int? brandId,
-    string? creatorType,
-    string sortBy = "createdat",
-    string sortDirection = "desc",
-    int page = 1,
-    CancellationToken ct = default)
+              string? search,
+              string? status,
+              string? creatortype,
+              int? categoryid,
+              int? brandid,
+              string? flags,
+              string? createdfrom,
+              string? createdto,
+              string? priceop,
+              string? pricemin,
+              string? pricemax,
+              string sortBy = "createdat",
+              string sortDirection = "desc",
+              int page = 1,
+              CancellationToken ct = default)
         {
             var token = _tokenService.GetAccessToken() ?? "";
 
-            var resultTask = _products.GetProductsAsync(token, page, 20, search, status,
-                                     categoryId, brandId, creatorType, sortBy, sortDirection);
+            // ── Fetch products from API ───────────────────────────────────
+            var result = await _products.GetProductsAsync(
+                token,
+                page: page,
+                pageSize: 20,
+                search: search,
+                status: status,
+                categoryId: categoryid,
+                brandId: brandid,
+                creatorType: creatortype,
+                sortBy: sortBy,
+                sortDirection: sortDirection);
+
+            // ── Fetch dropdown data for filter selects ────────────────────
             var categoriesTask = _categories.GetCategoriesAsync(token);
             var brandsTask = _brands.GetBrandsAsync(token);
+            await Task.WhenAll(categoriesTask, brandsTask);
 
-            await Task.WhenAll(resultTask, categoriesTask, brandsTask);
+            var categories = (await categoriesTask)?.Data ?? [];
+            var brands = (await brandsTask)?.Data ?? [];
 
-            var result = await resultTask;
-            var categories = await categoriesTask;
-            var brands = await brandsTask;
-
+            // ── Build ViewModel ───────────────────────────────────────────
             var vm = new ProductListViewModel
             {
+                // Data
                 Items = result?.Data?.Items.Select(p => new ProductListItem
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    Sku = p.Sku ?? "-",
+                    Sku = p.Sku ?? "",
                     CategoryName = p.CategoryName,
+                    BrandName = p.BrandName,
                     BasePrice = p.BasePrice,
                     CurrencyCode = p.CurrencyCode,
                     Status = p.Status,
+                    IsActive = p.IsActive,
+                    IsFeatured = p.IsFeatured,
                     SellerName = p.SellerName,
                     PrimaryImageUrl = p.PrimaryImageUrl,
-                    IsFeatured = p.IsFeatured,
-                    //VariantCount = p.VariantCount,
-                    //CreatorType = p.CreatorType,
+                    VariantCount = p.VariantCount,
                     CreatedAt = p.CreatedAt
                 }).ToList() ?? [],
-                Page = result?.Data?.Page ?? 1,
+
+                // Pagination
+                Page = result?.Data?.Page ?? page,
                 PageSize = result?.Data?.PageSize ?? 20,
                 TotalCount = result?.Data?.TotalCount ?? 0,
-                Search = search,
-                StatusFilter = status,
-                CategoryId = categoryId,
-                BrandId = brandId,
-                CreatorType = creatorType,
+
+                // Sort
                 SortBy = sortBy,
                 SortDirection = sortDirection,
-                Categories = categories?.Data?.Select(c =>
-                    new FilterOption { Value = c.Id.ToString(), Label = c.Name }).ToList() ?? [],
-                Brands = brands?.Data?.Select(b =>
-                    new FilterOption { Value = b.Id.ToString(), Label = b.Name }).ToList() ?? []
+
+                // Filter values — bound from query string
+                Search = search,
+                Status = status,
+                CreatorType = creatortype,
+                CategoryId = categoryid,
+                BrandId = brandid,
+                Flags = flags,
+                CreatedFrom = createdfrom,
+                CreatedTo = createdto,
+                PriceOp = priceop,
+                PriceMin = pricemin,
+                PriceMax = pricemax,
+
+                // Dropdown data for filter selects
+                Categories = categories.Select(c => new FilterOption
+                {
+                    Value = c.Id.ToString(),
+                    Label = c.Name
+                }).ToList(),
+
+                Brands = brands.Select(b => new FilterOption
+                {
+                    Value = b.Id.ToString(),
+                    Label = b.Name
+                }).ToList()
             };
+
+            // ── Build filter panel — one call, no duplication ─────────────
+            vm.BuildFilters();
 
             return View(vm);
         }

@@ -1,10 +1,12 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Brands;
 using Shared.Application.Models;
 
 namespace Catalog.Application.Services.Interface
 {
     public interface IBrandService
     {
+        Task<Result<PagedList<BrandDto>>> GetPagedAsync(
+            BrandFilterRequest filter, CancellationToken ct = default);
         Task<Result<BrandDto>> GetByIdAsync(int id, CancellationToken ct = default);
         Task<Result<IEnumerable<BrandDto>>> GetAllActiveAsync(CancellationToken ct = default);
         Task<Result<BrandDto>> CreateAsync(CreateBrandDto dto, Guid adminId, CancellationToken ct = default);

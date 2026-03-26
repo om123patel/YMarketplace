@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Catalog.Application.DTOs;
+using Catalog.Application.DTOs.Categories;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Services.Interface;
 using Catalog.Domain.Entities;
@@ -216,6 +216,19 @@ namespace Catalog.Application.Services
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
+        }
+
+        public async Task<Result<PagedList<CategoryDto>>> GetPagedAsync(CategoryFilterRequest filter, CancellationToken ct = default)
+        {
+            var paged = await _categoryRepository.GetPagedAsync(filter, ct);
+
+            var mapped = new PagedList<CategoryDto>(
+                _mapper.Map<List<CategoryDto>>(paged.Items),
+                paged.Page,
+                paged.PageSize,
+                paged.TotalCount);
+
+            return Result<PagedList<CategoryDto>>.Success(mapped);
         }
     }
 }

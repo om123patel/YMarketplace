@@ -1,4 +1,5 @@
 ﻿using AdminPanel.ViewModels.Common;
+using AdminPanel.ViewModels.Grid;
 
 namespace AdminPanel.ViewModels.Products
 {

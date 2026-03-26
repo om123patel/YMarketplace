@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Catalog.Application.DTOs;
+using Catalog.Application.DTOs.Brands;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Services.Interface;
 using Catalog.Domain.Entities;
@@ -177,6 +177,19 @@ namespace Catalog.Application.Services
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
+        }
+
+        public async Task<Result<PagedList<BrandDto>>> GetPagedAsync(BrandFilterRequest filter, CancellationToken ct = default)
+        {
+            var paged = await _brandRepository.GetPagedAsync(filter, ct);
+
+            var mapped = new PagedList<BrandDto>(
+                _mapper.Map<List<BrandDto>>(paged.Items),
+                paged.Page,
+                paged.PageSize,
+                paged.TotalCount);
+
+            return Result<PagedList<BrandDto>>.Success(mapped);
         }
     }
 

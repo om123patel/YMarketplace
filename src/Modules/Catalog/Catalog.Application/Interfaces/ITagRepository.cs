@@ -1,10 +1,13 @@
-﻿using Catalog.Domain.Entities;
+﻿using Catalog.Application.DTOs.Tags;
+using Catalog.Domain.Entities;
 using Shared.Application.Interfaces;
+using Shared.Application.Models;
 
 namespace Catalog.Application.Interfaces
 {
     public interface ITagRepository : IRepository<Tag, int>
     {
+        Task<PagedList<Tag>> GetPagedAsync(TagFilterRequest filter, CancellationToken ct = default);
         Task<IEnumerable<Tag>> GetAllAsync(CancellationToken ct = default);
         Task<IEnumerable<Tag>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken ct = default);
         Task<bool> ExistsAsync(int id, CancellationToken ct = default);

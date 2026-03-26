@@ -1,4 +1,4 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Categories;
 using FluentValidation;
 
 namespace Catalog.Application.Validators.Category

@@ -1,5 +1,9 @@
 ﻿using AutoMapper;
-using Catalog.Application.DTOs;
+using Catalog.Application.DTOs.Attributes;
+using Catalog.Application.DTOs.Brands;
+using Catalog.Application.DTOs.Categories;
+using Catalog.Application.DTOs.Products;
+using Catalog.Application.DTOs.Tags;
 using Catalog.Domain.Entities;
 using System.Text.Json;
 

@@ -1,4 +1,4 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Products;
 using Shared.Application.Models;
 
 namespace Catalog.Application.Services.Interface

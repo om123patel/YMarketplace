@@ -1,47 +1,30 @@
 @using AdminPanel.ViewModels.Common
 @using AdminPanel.ViewModels.Products
+
 @model SellerProductListViewModel
 @{
     ViewData["Title"] = "Seller Products";
 
-    string SortLink(string col)
-    {
-        var dir = (Model.SortBy == col && Model.SortDirection == "asc") ? "desc" : "asc";
-        return $"?search={Uri.EscapeDataString(Model.Search ?? "")}" +
-               $"&status={Uri.EscapeDataString(Model.StatusFilter ?? "")}" +
-               $"&categoryId={Model.CategoryId}" +
-               $"&sortBy={col}&sortDirection={dir}&page=1";
-    }
+    
 
-    string SortIcon(string col)
+    // ── Column header helpers ──────────────────────────────────────
+    TableColumnModel Col(string label, string column, string? width = null) => new()
     {
-        if (Model.SortBy != col) return "↕";
-        return Model.SortDirection == "asc" ? "↑" : "↓";
-    }
-
-    var pgRoute = new Dictionary<string, string?>
-    {
-        ["search"]        = Model.Search,
-        ["status"]        = Model.StatusFilter,
-        ["categoryId"]    = Model.CategoryId?.ToString(),
-        ["sortBy"]        = Model.SortBy,
-        ["sortDirection"] = Model.SortDirection
+        Label = label,
+        Sortable = true,
+        Column = column,
+        SortBy = Model.SortBy,
+        SortDirection = Model.SortDirection,
+        Request = Context.Request,
+        Width = width
     };
 
-    string StatusBadgeClass(string s) => s switch
+    TableColumnModel Plain(string label, string? width = null, string align = "left") => new()
     {
-        "Active"          => "badge badge-emerald",
-        "PendingApproval" => "badge badge-amber",
-        "Rejected"        => "badge badge-rose",
-        "Archived"        => "badge badge-gray",
-        "Draft"           => "badge badge-sky",
-        _                 => "badge badge-gray"
-    };
-
-    string StatusLabel(string s) => s switch
-    {
-        "PendingApproval" => "Pending",
-        _ => s
+        Label = label,
+        Sortable = false,
+        Width = width,
+        Align = align
     };
 }
 
@@ -52,28 +35,17 @@
     </div>
     <div class="pg-actions">
         <a asp-action="Index" class="btn btn-outline btn-sm">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             All Products
         </a>
     </div>
 </div>
 
-@if (TempData["Success"] is string ok)
-{
-    <div class="alert alert-emerald" id="alert-banner">
-        <div class="alert-icon">✓</div>
-        <div class="alert-body"><div class="alert-title">@ok</div></div>
-    </div>
-}
-@if (TempData["Error"] is string err)
-{
-    <div class="alert alert-rose" id="alert-banner">
-        <div class="alert-icon">✕</div>
-        <div class="alert-body"><div class="alert-title">@err</div></div>
-    </div>
-}
+<partial name="_AlertBanner" />
 
 @{
     var pendingCount = Model.Items.Count(x => x.Status == "PendingApproval");
@@ -93,23 +65,27 @@
 
 <div class="card">
 
-    
     <form method="get" class="filter-bar">
-        <input type="hidden" name="sortBy"        value="@Model.SortBy" />
+
+        
+        <input type="hidden" name="sortBy" value="@Model.SortBy" />
         <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
 
         <div class="filter-search">
-            <svg class="filter-search-ico" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <svg class="filter-search-ico" width="14" height="14" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <input name="search" value="@Model.Search" placeholder="Search products…" class="filter-input" />
+            <input name="search" value="@Model.Search"
+                   placeholder="Search products…" class="filter-input" />
         </div>
 
         <select name="status" class="filter-select">
             <option value="">All Statuses</option>
             @foreach (var s in new[] { "PendingApproval", "Active", "Rejected", "Archived", "Draft" })
             {
-                <option value="@s" selected="@(Model.StatusFilter == s)">@StatusLabel(s)</option>
+                <option value="@s" selected="@(Model.StatusFilter == s)">@BadgeHelper.SellerStatusLabel(s)</option>
             }
         </select>
 
@@ -117,24 +93,32 @@
             <option value="">All Categories</option>
             @foreach (var c in Model.Categories)
             {
-                <option value="@c.Value" selected="@(Model.CategoryId?.ToString() == c.Value)">@c.Label</option>
+                <option value="@c.Value"
+                        selected="@(Model.CategoryId?.ToString() == c.Value)">
+                    @c.Label
+                </option>
             }
         </select>
 
         <button type="submit" class="btn btn-outline btn-sm">Filter</button>
 
-        @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.StatusFilter) || Model.CategoryId.HasValue)
+        @if (!string.IsNullOrEmpty(Model.Search)
+                || !string.IsNullOrEmpty(Model.StatusFilter)
+                || Model.CategoryId.HasValue)
         {
             <a asp-action="Seller" class="btn btn-ghost btn-sm">Clear</a>
         }
+
     </form>
 
     @if (!Model.Items.Any())
     {
         <div class="empty-state">
             <div class="empty-icon">
-                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
             </div>
             <div class="empty-title">No seller products found</div>
@@ -147,65 +131,95 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Image</th>
-                        <th><a href="@SortLink("name")" class="sort-link">Product @SortIcon("name")</a></th>
-                        <th>Seller</th>
-                        <th>Category</th>
-                        <th><a href="@SortLink("price")" class="sort-link">Price @SortIcon("price")</a></th>
-                        <th>Status</th>
-                        <th><a href="@SortLink("createdat")" class="sort-link">Submitted @SortIcon("createdat")</a></th>
-                        <th style="width:150px">Actions</th>
+                        <partial name="_TableColumn" model="@Plain("", "48px")" />
+
+                        <partial name="_TableColumn" model="@Col("Product", "name")" />
+
+                        <partial name="_TableColumn" model="@Plain("Seller")" />
+                        <partial name="_TableColumn" model="@Plain("Category")" />
+
+                        <partial name="_TableColumn" model="@Col("Price", "price", "120px")" />
+
+                        <partial name="_TableColumn" model="@Plain("Status", "130px")" />
+
+                        <partial name="_TableColumn" model="@Col("Submitted", "createdat", "120px")" />
+
+                        <partial name="_TableColumn" model="@Plain("Actions", "150px", "center")" />
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var p in Model.Items)
                     {
                         <tr>
+
                             <td style="width:48px;padding-right:0">
                                 @if (!string.IsNullOrEmpty(p.PrimaryImageUrl))
                                 {
-                                    <img src="@p.PrimaryImageUrl" alt="@p.Name" class="prod-thumb" loading="lazy" />
+                                    <img src="@p.PrimaryImageUrl" alt="@p.Name"
+                                         class="prod-thumb" loading="lazy" />
                                 }
                                 else
                                 {
                                     <div class="prod-thumb prod-thumb--empty">
-                                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        <svg width="16" height="16" fill="none"
+                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                         </svg>
                                     </div>
                                 }
                             </td>
+
                             <td>
-                                <a asp-action="SellerDetail" asp-route-id="@p.Id" class="tbl-link">@p.Name</a>
+                                <a asp-action="SellerDetail" asp-route-id="@p.Id"
+                                   class="tbl-link">@p.Name</a>
                                 @if (p.VariantCount > 0)
                                 {
                                     <span class="tbl-meta">@p.VariantCount var.</span>
                                 }
                             </td>
+
                             <td class="tbl-seller">@(p.SellerName ?? "—")</td>
+
                             <td>@p.CategoryName</td>
+
                             <td class="tbl-mono">
                                 @(p.CurrencyCode == "INR" ? "₹" : p.CurrencyCode)@p.BasePrice.ToString("N2")
                             </td>
-                            <td><span class="@StatusBadgeClass(p.Status)">@StatusLabel(p.Status)</span></td>
+
+                            <td>
+                                <span class="@BadgeHelper.SellerStatus(p.Status)">
+                                    @BadgeHelper.SellerStatusLabel(p.Status)
+                                </span>
+                            </td>
+
                             <td class="tbl-date">@p.CreatedAt.ToString("dd MMM yyyy")</td>
+
                             <td>
                                 <div class="row-actions">
+
                                     <a asp-action="SellerDetail" asp-route-id="@p.Id"
                                        class="btn btn-ghost btn-xs" title="View">
-                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        <svg width="13" height="13" fill="none"
+                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </a>
 
                                     @if (p.Status == "PendingApproval")
                                     {
-                                        <form asp-action="Approve" asp-route-id="@p.Id" method="post" style="display:inline">
+                                        <form asp-action="Approve" asp-route-id="@p.Id"
+                                              method="post" style="display:inline">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-ghost btn-xs tbl-approve" title="Approve">
-                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                    <polyline points="20 6 9 17 4 12"/>
+                                            <button type="submit"
+                                                    class="btn btn-ghost btn-xs tbl-approve"
+                                                    title="Approve">
+                                                <svg width="13" height="13" fill="none"
+                                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                    <polyline points="20 6 9 17 4 12" />
                                                 </svg>
                                             </button>
                                         </form>
@@ -214,59 +228,72 @@
                                                 class="btn btn-ghost btn-xs tbl-danger"
                                                 title="Reject"
                                                 onclick="openReject('@p.Id')">
-                                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                                            <svg width="13" height="13" fill="none"
+                                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                <line x1="6" y1="6" x2="18" y2="18" />
                                             </svg>
                                         </button>
                                     }
 
                                     @if (p.Status == "Active")
                                     {
-                                        <form asp-action="Archive" asp-route-id="@p.Id" method="post" style="display:inline">
+                                        <form asp-action="Archive" asp-route-id="@p.Id"
+                                              method="post" style="display:inline">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-ghost btn-xs" title="Archive">
-                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                            <button type="submit"
+                                                    class="btn btn-ghost btn-xs"
+                                                    title="Archive">
+                                                <svg width="13" height="13" fill="none"
+                                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                          d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                                 </svg>
                                             </button>
                                         </form>
                                     }
+
                                 </div>
                             </td>
+
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
 
-       
+        <partial name="_Pagination" model="@(new PaginationViewModel
+                                    {
+                                        Page = Model.Page,
+                                        PageSize = Model.PageSize,
+                                        TotalCount = Model.TotalCount,
+                                        RouteData = Model.RouteData,
+                                        Action = "Seller",
+                                        Controller = "Products"
+                                    })" />
+        }
 
-    <partial name="_Pagination" model="@(new PaginationViewModel
-                                {
-                                    Page = Model.Page,
-                                    PageSize = Model.PageSize,
-                                    TotalCount = Model.TotalCount,
-                                    RouteData = Model.RouteData,
-                                    Action = "Seller",
-                                    Controller = "Products"
-                                })" />
-    }
 </div>
 
-
-<div class="modal-bg" id="rejectModal" style="display:none" onclick="closeRejectModal(event)">
+<div class="modal-bg" id="rejectModal" style="display:none"
+     onclick="closeRejectModal(event)">
     <div class="modal-card">
         <div class="modal-title">Reject product</div>
         <form id="rejectForm" method="post">
             @Html.AntiForgeryToken()
             <div class="form-group">
-                <label class="form-label" for="rejectReason">Reason <span class="form-req">*</span></label>
+                <label class="form-label" for="rejectReason">
+                    Reason <span class="form-req">*</span>
+                </label>
                 <textarea name="reason" id="rejectReason" class="form-ctrl" rows="3"
-                          placeholder="Explain why this product is being rejected…" required></textarea>
+                          placeholder="Explain why this product is being rejected…"
+                          required></textarea>
             </div>
             <div class="modal-actions">
                 <button type="button" class="btn btn-outline"
-                        onclick="document.getElementById('rejectModal').style.display='none'">Cancel</button>
+                        onclick="document.getElementById('rejectModal').style.display='none'">
+                    Cancel
+                </button>
                 <button type="submit" class="btn btn-danger">Reject</button>
             </div>
         </form>
@@ -274,15 +301,15 @@
 </div>
 
 @section Scripts {
-<script>
-function openReject(id) {
-    document.getElementById('rejectForm').action = `/Products/${id}/Reject`;
-    document.getElementById('rejectReason').value = '';
-    document.getElementById('rejectModal').style.display = 'flex';
-}
-function closeRejectModal(e) {
-    if (e.target === document.getElementById('rejectModal'))
-        document.getElementById('rejectModal').style.display = 'none';
-}
-</script>
+    <script>
+        function openReject(id) {
+            document.getElementById('rejectForm').action = `/Products/${id}/Reject`;
+            document.getElementById('rejectReason').value = '';
+            document.getElementById('rejectModal').style.display = 'flex';
+        }
+        function closeRejectModal(e) {
+            if (e.target === document.getElementById('rejectModal'))
+                document.getElementById('rejectModal').style.display = 'none';
+        }
+    </script>
 }

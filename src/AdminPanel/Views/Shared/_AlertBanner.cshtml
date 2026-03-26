@@ -1,0 +1,39 @@
+﻿@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-emerald" id="alert-banner" role="alert">
+        <div class="alert-icon" aria-hidden="true">✓</div>
+        <div class="alert-body">
+            <div class="alert-title">@ok</div>
+        </div>
+    </div>
+}
+
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-rose" id="alert-banner" role="alert">
+        <div class="alert-icon" aria-hidden="true">✕</div>
+        <div class="alert-body">
+            <div class="alert-title">@err</div>
+        </div>
+    </div>
+}
+
+@if (TempData["Warning"] is string warn)
+{
+    <div class="alert alert-amber" id="alert-banner" role="alert">
+        <div class="alert-icon" aria-hidden="true">⚠</div>
+        <div class="alert-body">
+            <div class="alert-title">@warn</div>
+        </div>
+    </div>
+}
+
+@if (TempData["Info"] is string info)
+{
+    <div class="alert alert-sky" id="alert-banner" role="alert">
+        <div class="alert-icon" aria-hidden="true">ℹ</div>
+        <div class="alert-body">
+            <div class="alert-title">@info</div>
+        </div>
+    </div>
+}

@@ -1,4 +1,4 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Products;
 using Catalog.Application.Validators.Product;
 using FluentValidation;
 

@@ -1,47 +1,71 @@
 @using AdminPanel.ViewModels.Attributes
+
 @model AttributeListViewModel
 @{
     ViewData["Title"] = "Attribute Templates";
+
+    TableColumnModel Col(string label, string column, string? width = null) => new()
+    {
+        Label = label,
+        Sortable = true,
+        Column = column,
+        SortBy = Model.SortBy,
+        SortDirection = Model.SortDirection,
+        Request = Context.Request,
+        Width = width
+    };
+
+    TableColumnModel Plain(string label, string? width = null, string align = "left") => new()
+    {
+        Label = label,
+        Sortable = false,
+        Width = width,
+        Align = align
+    };
 }
 
 <div class="pg-bar">
     <div>
         <h1 class="pg-title">Attribute Templates</h1>
-        @* <p class="pg-sub">@Model.TotalCount total &middot; @Model.ActiveCount active</p> *@
     </div>
     <div class="pg-actions">
         <a asp-action="Create" class="btn btn-primary">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
             New Template
         </a>
     </div>
 </div>
 
-@if (TempData["Success"] is string ok)
-{
-    <div class="alert alert-emerald"><div class="alert-icon">✓</div><div class="alert-body"><div class="alert-title">@ok</div></div></div>
-}
-@if (TempData["Error"] is string err)
-{
-    <div class="alert alert-rose">   <div class="alert-icon">✕</div><div class="alert-body"><div class="alert-title">@err</div></div></div>
-}
+<partial name="_AlertBanner" />
 
 <div class="card">
+
     <form method="get" class="filter-bar">
-        <div class="filter-search">
-            <svg class="filter-search-ico" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-            <input name="search" value="@Model.Search" placeholder="Search templates or categories…" class="filter-input" />
-        </div>
+
         <input type="hidden" name="sortBy" value="@Model.SortBy" />
         <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
-        <div class="tab-group">
-            <a href="?search=@Uri.EscapeDataString(Model.Search ?? "")&sortBy=@Model.SortBy&sortDirection=@Model.SortDirection"
-               class="tab @(string.IsNullOrEmpty(Model.StatusFilter) ? "on" : "")">All <span class="tab-count">@Model.TotalCount</span></a>
-            @* <a href="?search=@Uri.EscapeDataString(Model.Search ?? "")&status=active&sortBy=@Model.SortBy&sortDirection=@Model.SortDirection"
-               class="tab @(Model.StatusFilter == "active" ? "on" : "")">Active <span class="tab-count">@Model.ActiveCount</span></a>
-            <a href="?search=@Uri.EscapeDataString(Model.Search ?? "")&status=inactive&sortBy=@Model.SortBy&sortDirection=@Model.SortDirection"
-               class="tab @(Model.StatusFilter == "inactive" ? "on" : "")">Inactive <span class="tab-count">@Model.InactiveCount</span></a> *@
+
+        <div class="filter-search">
+            <svg class="filter-search-ico" width="14" height="14" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input name="search" value="@Model.Search"
+                   placeholder="Search templates or categories…" class="filter-input" />
         </div>
+
+        <div class="tab-group">
+            <a href="@Url.Action("Index", new { search = Model.Search, sortBy = Model.SortBy, sortDirection = Model.SortDirection })"
+               class="tab @(string.IsNullOrEmpty(Model.StatusFilter) ? "on" : "")">
+                All <span class="tab-count">@Model.TotalCount</span>
+            </a>
+        </div>
+
         <div class="f-right">
             <button type="submit" class="btn btn-outline btn-sm">Search</button>
             @if (!string.IsNullOrEmpty(Model.Search))
@@ -49,12 +73,19 @@
                 <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
             }
         </div>
+
     </form>
 
     @if (!Model.Items.Any())
     {
         <div class="empty-state">
-            <div class="empty-icon"><svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div>
+            <div class="empty-icon">
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+            </div>
             <div class="empty-title">No attribute templates</div>
             <div class="empty-desc">Create templates to define custom product fields per category.</div>
             <a asp-action="Create" class="btn btn-primary btn-sm">New Template</a>
@@ -66,71 +97,101 @@
             <table>
                 <thead>
                     <tr>
-                        <th>
-                            <a href="?search=@Model.Search&status=@Model.StatusFilter&sortBy=name&sortDirection=@Model.NextDirection("name")&page=1" class="sort-link">
-                                Template Name @Model.SortIcon("name")
-                            </a>
-                        </th>
-                        <th>
-                            <a href="?search=@Model.Search&status=@Model.StatusFilter&sortBy=name&sortDirection=@Model.NextDirection("category")&page=1" class="sort-link">
-                                Category @Model.SortIcon("category")
-                            </a>
-                        </th>
-                        <th>
-                            <a href="?search=@Model.Search&status=@Model.StatusFilter&sortBy=name&sortDirection=@Model.NextDirection("attributes")&page=1" class="sort-link">
-                                Attributes @Model.SortIcon("attributes")
-                            </a>
-                        </th>
-                        <th>Status</th>
-                        <th>
-                            <a href="?search=@Model.Search&status=@Model.StatusFilter&sortBy=name&sortDirection=@Model.NextDirection("updated")&page=1" class="sort-link">
-                                Updated @Model.SortIcon("updated")
-                            </a>
-                        </th>
-                        <th style="width:90px">Actions</th>
+                        <partial name="_TableColumn" model="@Col("Template Name", "name")" />
+                        <partial name="_TableColumn" model="@Col("Category", "category")" />
+                        <partial name="_TableColumn" model="@Col("Attributes", "attributes")" />
+                        <partial name="_TableColumn" model="@Plain("Status", "110px")" />
+                        <partial name="_TableColumn" model="@Col("Updated", "updated", "120px")" />
+                        <partial name="_TableColumn" model="@Plain("Actions", "90px", "center")" />
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var a in Model.Items)
                     {
                         <tr>
+
                             <td>
                                 <div class="tbl-link">@a.Name</div>
                             </td>
-                            <td><span class="badge badge-sky">@a.CategoryName</span></td>
+
+                            <td>
+                                <span class="badge badge-sky">@a.CategoryName</span>
+                            </td>
+
                             <td>
                                 <span class="badge @(a.ItemCount > 0 ? "badge-indigo" : "badge-gray")">
                                     @a.ItemCount attr@(a.ItemCount == 1 ? "" : "s")
                                 </span>
                             </td>
-                            <td><span class="badge @(a.IsActive ? "badge-emerald" : "badge-gray")">@(a.IsActive ? "Active" : "Inactive")</span></td>
+
+                            <td>
+                                <span class="badge @(a.IsActive ? "badge-emerald" : "badge-gray")">
+                                    @(a.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+
                             <td class="tbl-date">@a.UpdatedAt.ToString("dd MMM yyyy")</td>
+
                             <td>
                                 <div class="row-acts">
-                                    <a asp-action="Edit" asp-route-id="@a.Id" class="row-btn" title="Edit">
-                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+
+                                    <a asp-action="Edit" asp-route-id="@a.Id"
+                                       class="row-btn" title="Edit">
+                                        <svg width="14" height="14" fill="none"
+                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
                                     </a>
-                                    <button type="button" class="row-btn danger" title="Delete"
+
+                                    <button type="button"
+                                            class="row-btn danger"
+                                            title="Delete"
                                             onclick="openDelModal(@a.Id,'@Html.Encode(a.Name)')">
-                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6" /><path stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14H6L5 6m5 0V4h4v2" /></svg>
+                                        <svg width="14" height="14" fill="none"
+                                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M19 6l-1 14H6L5 6m5 0V4h4v2" />
+                                        </svg>
                                     </button>
+
                                 </div>
                             </td>
+
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+
+        <partial name="_Pagination" model="@(new PaginationViewModel
+                                    {
+                                        Page = Model.Page,
+                                        PageSize = Model.PageSize,
+                                        TotalCount = Model.TotalCount,
+                                        RouteData = Model.RouteData,
+                                        Action = "Index",
+                                        Controller = "Attributes"
+                                    })" />
     }
+
 </div>
 
-<div class="modal-backdrop" id="delModal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+<div class="modal-backdrop" id="delModal" style="display:none"
+     onclick="if(event.target===this)this.style.display='none'">
     <div class="modal-card">
         <div class="modal-title">Delete template?</div>
         <p class="modal-desc" id="delModalDesc"></p>
         <div class="modal-actions">
-            <button type="button" class="btn btn-outline" onclick="document.getElementById('delModal').style.display='none'">Cancel</button>
-            <form id="delForm" method="post">@Html.AntiForgeryToken()<button type="submit" class="btn btn-danger">Delete</button></form>
+            <button type="button" class="btn btn-outline"
+                    onclick="document.getElementById('delModal').style.display='none'">
+                Cancel
+            </button>
+            <form id="delForm" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
         </div>
     </div>
 </div>
@@ -138,7 +199,8 @@
 @section Scripts {
     <script>
         function openDelModal(id, name) {
-            document.getElementById('delModalDesc').textContent = `Delete "${name}"? All attribute definitions will be removed.`;
+            document.getElementById('delModalDesc').textContent =
+                `Delete "${name}"? All attribute definitions will be removed.`;
             document.getElementById('delForm').action = `/Attributes/${id}/Delete`;
             document.getElementById('delModal').style.display = 'flex';
         }

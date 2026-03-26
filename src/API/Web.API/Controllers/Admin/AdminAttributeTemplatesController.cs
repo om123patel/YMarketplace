@@ -1,4 +1,6 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Attributes;
+using Catalog.Application.DTOs.Brands;
+using Catalog.Application.Services;
 using Catalog.Application.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +18,15 @@ namespace Web.API.Controllers.Admin
             IAttributeTemplateService templateService)
         {
             _templateService = templateService;
+        }
+
+        [HttpGet("GetPaged")]
+        public async Task<IActionResult> GetPaged(
+           [FromQuery] AttributeFilterRequest filter,
+           CancellationToken ct)
+        {
+            var result = await _templateService.GetPagedAsync(filter, ct);
+            return HandleResult(result);
         }
 
         // GET api/admin/attribute-templates

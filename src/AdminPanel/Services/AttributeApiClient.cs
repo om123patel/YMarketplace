@@ -1,6 +1,6 @@
-﻿// AdminPanel/Services/AttributeApiClient.cs
-using AdminPanel.Dtos.Attributes;
+﻿using AdminPanel.Dtos.Attributes;
 using AdminPanel.Dtos.Categories;
+using AdminPanel.Dtos.Common;
 using AdminPanel.Models;
 using AdminPanel.Services.Interfaces;
 
@@ -38,5 +38,20 @@ namespace AdminPanel.Services
         public Task<ApiResponse<List<CategoryDto>>?> GetCategoriesAsync(string token)
             => GetAsync<ApiResponse<List<CategoryDto>>>(
                 "api/admin/categories", token);
+
+        public async Task<ApiResponse<PagedResult<AttributeTemplateDto>>?> GetPaged(string token, int page, int pageSize, string? search = null, string? status = null, string sortBy = "name", string sortDirection = "asc")
+        {
+            var q = BuildQuery(new()
+            {
+                ["page"] = page.ToString(),
+                ["pageSize"] = pageSize.ToString(),
+                ["search"] = search,
+                ["status"] = status,
+                ["sortBy"] = sortBy,
+                ["sortDirection"] = sortDirection
+            });
+            return await GetAsync<ApiResponse<PagedResult<AttributeTemplateDto>>>(
+                $"api/admin/tags/GetPaged{q}", token);
+        }
     }
 }

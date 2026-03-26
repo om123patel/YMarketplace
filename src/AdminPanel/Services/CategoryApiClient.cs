@@ -1,5 +1,6 @@
 ﻿// AdminPanel/Services/CategoryApiClient.cs
 using AdminPanel.Dtos.Categories;
+using AdminPanel.Dtos.Common;
 using AdminPanel.Models;
 using AdminPanel.Services.Interfaces;
 
@@ -38,5 +39,23 @@ namespace AdminPanel.Services
             => PatchAsync<ApiResponse>(
                 $"api/admin/categories/{id}/{(activate ? "activate" : "deactivate")}",
                 null, token);
+
+        public async Task<ApiResponse<PagedResult<CategoryDto>>?> GetPaged(string token, 
+            int page, int pageSize, string? search = null, 
+            string? status = null, string sortBy = "name", 
+            string sortDirection = "asc")
+        {
+            var q = BuildQuery(new()
+            {
+                ["page"] = page.ToString(),
+                ["pageSize"] = pageSize.ToString(),
+                ["search"] = search,
+                ["status"] = status,
+                ["sortBy"] = sortBy,
+                ["sortDirection"] = sortDirection
+            });
+            return await GetAsync<ApiResponse<PagedResult<CategoryDto>>>(
+                $"api/admin/categories/GetPaged{q}", token);
+        }
     }
 }

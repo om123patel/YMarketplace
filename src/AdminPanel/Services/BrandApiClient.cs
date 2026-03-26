@@ -1,5 +1,5 @@
-﻿// AdminPanel/Services/BrandApiClient.cs
-using AdminPanel.Dtos.Brands;
+﻿using AdminPanel.Dtos.Brands;
+using AdminPanel.Dtos.Common;
 using AdminPanel.Models;
 using AdminPanel.Services.Interfaces;
 
@@ -38,5 +38,20 @@ namespace AdminPanel.Services
             => PatchAsync<ApiResponse>(
                 $"api/admin/brands/{id}/{(activate ? "activate" : "deactivate")}",
                 null, token);
+
+        public async Task<ApiResponse<PagedResult<BrandDto>>?> GetPaged(string token, int page, int pageSize, string? search = null, string? status = null, string sortBy = "name", string sortDirection = "asc")
+        {
+            var q = BuildQuery(new()
+            {
+                ["page"] = page.ToString(),
+                ["pageSize"] = pageSize.ToString(),
+                ["search"] = search,
+                ["status"] = status,
+                ["sortBy"] = sortBy,
+                ["sortDirection"] = sortDirection
+            });
+            return await GetAsync<ApiResponse<PagedResult<BrandDto>>>(
+                $"api/admin/brands/GetPaged{q}", token);
+        }
     }
 }

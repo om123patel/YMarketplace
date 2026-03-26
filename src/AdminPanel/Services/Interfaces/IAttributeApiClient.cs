@@ -1,12 +1,19 @@
 ﻿// AdminPanel/Services/Interfaces/IAttributeApiClient.cs
 using AdminPanel.Dtos.Attributes;
 using AdminPanel.Dtos.Categories;
+using AdminPanel.Dtos.Common;
 using AdminPanel.Models;
 
 namespace AdminPanel.Services.Interfaces
 {
     public interface IAttributeApiClient
     {
+        Task<ApiResponse<PagedResult<AttributeTemplateDto>>?> GetPaged(string token,
+     int page, int pageSize,
+     string? search = null,
+     string? status = null,
+     string sortBy = "name",
+     string sortDirection = "asc");
         Task<ApiResponse<List<AttributeTemplateDto>>?> GetAttributeTemplatesAsync(
             string token);
         Task<ApiResponse<AttributeTemplateDto>?> GetAttributeTemplateByIdAsync(

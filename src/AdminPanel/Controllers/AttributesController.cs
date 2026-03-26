@@ -17,51 +17,43 @@ namespace AdminPanel.Controllers
         public AttributesController(IAttributeApiClient attributes, AuthTokenService tokens)
         { _attributes = attributes; _tokens = tokens; }
 
-        public async Task<IActionResult> Index(
-            string? search, string? status,
+        public async Task<IActionResult> Index(string? search, string? status,
             string sortBy = "name", string sortDirection = "asc",
+            int page = 1, int pageSize = 10,
             CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _attributes.GetAttributeTemplatesAsync(token);
 
-            var q = (result?.Data ?? []).AsEnumerable();
-            if (!string.IsNullOrWhiteSpace(search))
-                q = q.Where(a => a.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                               || a.CategoryName.Contains(search, StringComparison.OrdinalIgnoreCase));
-            if (status == "active") q = q.Where(a => a.IsActive);
-            if (status == "inactive") q = q.Where(a => !a.IsActive);
+            var result = await _attributes.GetPaged(token,
+                page, pageSize, search, status, sortBy, sortDirection);
 
-            var items = q.Select(a => new AttributeTemplateListItem
+            var data = result?.Data;
+            List<AttributeTemplateListItem> items;
+
+            if (data?.Items?.Any() == true)
             {
-                Id = a.Id,
-                Name = a.Name,
-                CategoryId = a.CategoryId,
-                CategoryName = a.CategoryName,
-                IsActive = a.IsActive,
-                ItemCount = a.Items.Count,
-                CreatedAt = a.CreatedAt,
-                UpdatedAt = a.UpdatedAt
-            }).ToList();
-
-            items = (sortBy, sortDirection) switch
+                items = data.Items.Select(a => new AttributeTemplateListItem
+                {
+                    Id = a.Id,
+                    Name = a.Name,
+                    CategoryId = a.CategoryId,
+                    CategoryName = a.CategoryName,
+                    IsActive = a.IsActive,
+                    ItemCount = a.Items.Count,
+                    CreatedAt = a.CreatedAt,
+                    UpdatedAt = a.UpdatedAt
+                }).ToList();
+            }
+            else
             {
-                ("name", "desc") => items.OrderByDescending(i => i.Name).ToList(),
-                ("category", "asc") => items.OrderBy(i => i.CategoryName).ToList(),
-                ("category", "desc") => items.OrderByDescending(i => i.CategoryName).ToList(),
-                ("attributes", "asc") => items.OrderBy(i => i.ItemCount).ToList(),
-                ("attributes", "desc") => items.OrderByDescending(i => i.ItemCount).ToList(),
-                ("updated", "asc") => items.OrderBy(i => i.UpdatedAt).ToList(),
-                ("updated", "desc") => items.OrderByDescending(i => i.UpdatedAt).ToList(),
-                _ => items.OrderBy(i => i.Name).ToList()
-            };
-
+                items = new List<AttributeTemplateListItem>();
+            }
             var vm = new AttributeListViewModel
             {
                 Items = items,
-                TotalCount = items.Count,
-                Page = 1,
-                PageSize = items.Count == 0 ? 20 : items.Count,
+                TotalCount = data?.TotalCount ?? 0,
+                Page = data?.Page ?? page,
+                PageSize = data?.PageSize ?? pageSize,
                 Search = search,
                 StatusFilter = status,
                 SortBy = sortBy,

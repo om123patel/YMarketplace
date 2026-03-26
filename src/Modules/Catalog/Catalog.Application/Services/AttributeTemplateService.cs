@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Catalog.Application.DTOs;
+using Catalog.Application.DTOs.Attributes;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Services.Interface;
 using Catalog.Domain.Entities;
@@ -179,6 +179,19 @@ namespace Catalog.Application.Services
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
+        }
+
+        public async Task<Result<PagedList<AttributeTemplateDto>>> GetPagedAsync(AttributeFilterRequest filter, CancellationToken ct = default)
+        {
+            var paged = await _templateRepository.GetPagedAsync(filter, ct);
+
+            var mapped = new PagedList<AttributeTemplateDto>(
+                _mapper.Map<List<AttributeTemplateDto>>(paged.Items),
+                paged.Page,
+                paged.PageSize,
+                paged.TotalCount);
+
+            return Result<PagedList<AttributeTemplateDto>>.Success(mapped);
         }
     }
 

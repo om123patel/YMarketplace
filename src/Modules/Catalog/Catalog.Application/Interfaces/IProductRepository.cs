@@ -1,4 +1,4 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Products;
 using Catalog.Domain.Entities;
 using Shared.Application.Interfaces;
 using Shared.Application.Models;

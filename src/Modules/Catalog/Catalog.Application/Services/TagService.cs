@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Catalog.Application.DTOs;
+using Catalog.Application.DTOs.Tags;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Services.Interface;
 using Catalog.Domain.Entities;
@@ -129,6 +129,19 @@ namespace Catalog.Application.Services
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
+        }
+
+        public async Task<Result<PagedList<TagDto>>> GetPagedAsync(TagFilterRequest filter, CancellationToken ct = default)
+        {
+            var paged = await _tagRepository.GetPagedAsync(filter, ct);
+
+            var mapped = new PagedList<TagDto>(
+                _mapper.Map<List<TagDto>>(paged.Items),
+                paged.Page,
+                paged.PageSize,
+                paged.TotalCount);
+
+            return Result<PagedList<TagDto>>.Success(mapped);
         }
     }
 

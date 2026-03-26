@@ -3,48 +3,94 @@
 
 @if (Model.TotalCount == 0) { return; }
 
+@{
+    int startPage = Math.Max(1, Model.Page - 2);
+    int endPage   = Math.Min(Model.TotalPages, Model.Page + 2);
+}
+
 <div class="pagination">
     <div class="pg-info">
         Showing @Model.FirstItemIndex–@Model.LastItemIndex
         of @Model.TotalCount.ToString("N0") results
     </div>
+
     <div class="pg-ctrl">
 
+        
         @if (Model.HasPreviousPage)
         {
-            var prev = new Dictionary<string, string?>(Model.RouteData)
-            { ["page"] = (Model.Page - 1).ToString() };
+            var rd = new Dictionary<string, string?>(Model.RouteData) { ["page"] = (Model.Page - 1).ToString() };
             <a asp-action="@Model.Action" asp-controller="@Model.Controller"
-               asp-all-route-data="prev" class="pg-btn" aria-label="Previous">
+               asp-all-route-data="rd" class="pg-btn" aria-label="Previous">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
                      stroke="currentColor" stroke-width="2.5">
-                    <polyline points="15 18 9 12 15 6" />
+                    <polyline points="15 18 9 12 15 6"/>
                 </svg>
             </a>
         }
-
-        @for (int i = Math.Max(1, Model.Page - 2);
-                i <= Math.Min(Model.TotalPages, Model.Page + 2); i++)
+        else
         {
-            var pd = new Dictionary<string, string?>(Model.RouteData)
-            { ["page"] = i.ToString() };
+            <span class="pg-btn pg-btn--disabled" aria-disabled="true">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2.5">
+                    <polyline points="15 18 9 12 15 6"/>
+                </svg>
+            </span>
+        }
+
+        
+        @if (startPage > 2)
+        {
+            var rd = new Dictionary<string, string?>(Model.RouteData) { ["page"] = "1" };
             <a asp-action="@Model.Action" asp-controller="@Model.Controller"
-               asp-all-route-data="pd"
-               class="pg-btn @(i == Model.Page ? "on" : "")"
-               aria-current="@(i == Model.Page ? "page" : null)">@i</a>
+               asp-all-route-data="rd" class="pg-btn">1</a>
+        }
+        @if (startPage > 3)
+        {
+            <span class="pg-dots">…</span>
+        }
+
+        
+        @for (int i = startPage; i <= endPage; i++)
+        {
+            var rd  = new Dictionary<string, string?>(Model.RouteData) { ["page"] = i.ToString() };
+            var cls = i == Model.Page ? "pg-btn on" : "pg-btn";
+            var cur = i == Model.Page ? "page" : null;
+            <a asp-action="@Model.Action" asp-controller="@Model.Controller"
+               asp-all-route-data="rd" class="@cls" aria-current="@cur">@i</a>
+        }
+
+        
+        @if (endPage < Model.TotalPages - 1)
+        {
+            <span class="pg-dots">…</span>
+        }
+        @if (endPage < Model.TotalPages)
+        {
+            var rd = new Dictionary<string, string?>(Model.RouteData) { ["page"] = Model.TotalPages.ToString() };
+            <a asp-action="@Model.Action" asp-controller="@Model.Controller"
+               asp-all-route-data="rd" class="pg-btn">@Model.TotalPages</a>
         }
 
         @if (Model.HasNextPage)
         {
-            var next = new Dictionary<string, string?>(Model.RouteData)
-            { ["page"] = (Model.Page + 1).ToString() };
+            var rd = new Dictionary<string, string?>(Model.RouteData) { ["page"] = (Model.Page + 1).ToString() };
             <a asp-action="@Model.Action" asp-controller="@Model.Controller"
-               asp-all-route-data="next" class="pg-btn" aria-label="Next">
+               asp-all-route-data="rd" class="pg-btn" aria-label="Next">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
                      stroke="currentColor" stroke-width="2.5">
-                    <polyline points="9 18 15 12 9 6" />
+                    <polyline points="9 18 15 12 9 6"/>
                 </svg>
             </a>
+        }
+        else
+        {
+            <span class="pg-btn pg-btn--disabled" aria-disabled="true">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2.5">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+            </span>
         }
 
     </div>

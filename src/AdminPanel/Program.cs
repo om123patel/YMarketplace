@@ -22,7 +22,9 @@ namespace AdminPanel
             // ──────────────────────────────────────────────────────────
             var services = builder.Services;
 
-            services.AddControllersWithViews();
+            services.AddControllersWithViews()
+    .AddRazorRuntimeCompilation();
+
             services.AddHttpContextAccessor();
 
             // ── Session (stores JWT in server-side session) ────────────

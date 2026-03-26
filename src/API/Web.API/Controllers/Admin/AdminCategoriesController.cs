@@ -1,4 +1,5 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Categories;
+using Catalog.Application.Services;
 using Catalog.Application.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,16 @@ namespace Web.API.Controllers.Admin
         {
             _categoryService = categoryService;
         }
+
+        [HttpGet("GetPaged")]
+        public async Task<IActionResult> GetPaged(
+           [FromQuery] CategoryFilterRequest filter,
+           CancellationToken ct)
+        {
+            var result = await _categoryService.GetPagedAsync(filter, ct);
+            return HandleResult(result);
+        }
+
 
         // GET api/admin/categories
         [HttpGet]

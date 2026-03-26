@@ -1,0 +1,394 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   table-filters.css  —  MarketHub Admin
+   Append to admin.css  OR  link separately before </head>.
+   Class prefix: tf-  (table-filter)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Toggle button ─────────────────────────────────────────────────────── */
+.tf-toggle-btn {
+    position: relative;
+    gap: 6px;
+}
+.tf-toggle-btn--active,
+.tf-toggle--active {           /* .tf-toggle--active used in _ListFilterBar */
+    background: var(--c-indigo-lt) !important;
+    color:      var(--c-indigo)    !important;
+    border-color: var(--c-indigo)  !important;
+}
+.tf-toggle-chev {
+    transition: transform .22s var(--ease);
+}
+[aria-expanded="true"] .tf-toggle-chev {
+    transform: rotate(180deg);
+}
+
+/* Active-filter count badge on the toggle button */
+.tf-badge {
+    display:         inline-flex;
+    align-items:     center;
+    justify-content: center;
+    min-width: 17px;
+    height:    17px;
+    padding:   0 5px;
+    border-radius: 20px;
+    background: var(--c-indigo);
+    color:      #fff;
+    font-size:  10px;
+    font-weight: 700;
+    line-height: 1;
+    margin-left: 2px;
+}
+
+/* ── Collapsible panel ──────────────────────────────────────────────────── */
+.tf-panel {
+    max-height: 0;
+    overflow:   hidden;
+    opacity:    0;
+    border-bottom: 0px solid var(--c-border);
+    transition: max-height .28s cubic-bezier(.4,0,.2,1),
+                opacity    .22s cubic-bezier(.4,0,.2,1);
+}
+.tf-panel--open {
+    max-height: 800px;   /* large enough for any filter set */
+    opacity:    1;
+    border-bottom-width: 1px;
+}
+.tf-panel-inner {
+    padding:    18px 20px 16px;
+    background: var(--c-surface);
+    border-top: 1px solid var(--c-border);
+}
+
+/* Active column — subtle highlight on the column wrapper */
+.tf-col--active > .tf-label {
+    color: var(--c-indigo);
+}
+
+/* ── Filter grid ────────────────────────────────────────────────────────── */
+.tf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px 16px;
+    margin-bottom: 16px;
+}
+/* Explicit narrow column counts */
+.tf-grid[data-tf-cols="1"] { grid-template-columns: minmax(240px, 380px); }
+.tf-grid[data-tf-cols="2"] { grid-template-columns: repeat(2, 1fr); max-width: 560px; }
+.tf-grid[data-tf-cols="3"] { grid-template-columns: repeat(3, 1fr); }
+
+/* ── Column label ───────────────────────────────────────────────────────── */
+.tf-label {
+    display:        block;
+    font-size:      11px;
+    font-weight:    700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color:          var(--c-ink-4);
+    margin-bottom:  5px;
+    transition: color var(--dur);
+}
+
+/* ── Text input wrapper ─────────────────────────────────────────────────── */
+.tf-ctrl-wrap {
+    position: relative;
+    display:  flex;
+    align-items: center;
+}
+.tf-ctrl-ico {
+    position:       absolute;
+    left:           10px;
+    top:            50%;
+    transform:      translateY(-50%);
+    color:          var(--c-ink-4);
+    pointer-events: none;
+    flex-shrink:    0;
+    transition:     color var(--dur);
+}
+.tf-ctrl-wrap:focus-within .tf-ctrl-ico { color: var(--c-indigo); }
+
+/* Currency / unit prefix icon (sits to the left like a search icon) */
+.tf-unit-ico {
+    font-size:   12px;
+    font-weight: 700;
+    font-family: var(--f-body);
+    color:       var(--c-ink-3);
+}
+
+.tf-input {
+    width:        100%;
+    height:       34px;
+    background:   var(--c-white);
+    border:       1.5px solid var(--c-border);
+    border-radius: var(--r-md);
+    padding:      0 30px 0 30px;  /* left=icon, right=× btn */
+    font-size:    13px;
+    color:        var(--c-ink);
+    font-family:  var(--f-body);
+    outline:      none;
+    transition:   border-color var(--dur), box-shadow var(--dur);
+}
+.tf-input::placeholder { color: var(--c-ink-4); }
+.tf-input:hover  { border-color: var(--c-border-md); }
+.tf-input:focus  { border-color: var(--c-indigo); box-shadow: 0 0 0 3px var(--c-indigo-lt); }
+
+/* No left padding when no icon */
+.tf-input--no-icon { padding-left: 10px; }
+
+/* With currency unit */
+.tf-input--unit { padding-left: 26px; }
+
+/* Active state — field has a value */
+.tf-ctrl--active {
+    border-color: var(--c-indigo) !important;
+    background:   #f5f3ff        !important;
+}
+
+/* Clear × button */
+.tf-x {
+    position:   absolute;
+    right:      8px;
+    top:        50%;
+    transform:  translateY(-50%);
+    width:      16px;
+    height:     16px;
+    border-radius: 50%;
+    background: var(--c-border-md);
+    color:      var(--c-ink-2);
+    font-size:  11px;
+    line-height: 1;
+    display:    flex;
+    align-items:     center;
+    justify-content: center;
+    cursor:     pointer;
+    flex-shrink: 0;
+    font-family: var(--f-body);
+    border:     none;
+    transition: background var(--dur), color var(--dur);
+}
+.tf-x:hover { background: var(--c-rose); color: #fff; }
+
+/* ── Select ──────────────────────────────────────────────────────────────── */
+.tf-select {
+    width:        100%;
+    height:       34px;
+    background:   var(--c-white);
+    border:       1.5px solid var(--c-border);
+    border-radius: var(--r-md);
+    padding:      0 28px 0 10px;
+    font-size:    13px;
+    color:        var(--c-ink);
+    font-family:  var(--f-body);
+    outline:      none;
+    appearance:   none;
+    cursor:       pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238f8b99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:   no-repeat;
+    background-position: right 10px center;
+    transition: border-color var(--dur), box-shadow var(--dur);
+}
+.tf-select:hover { border-color: var(--c-border-md); }
+.tf-select:focus { border-color: var(--c-indigo); box-shadow: 0 0 0 3px var(--c-indigo-lt); }
+.tf-select.tf-ctrl--active { border-color: var(--c-indigo); background-color: #f5f3ff; color: var(--c-indigo); }
+
+/* ── Radio group ────────────────────────────────────────────────────────── */
+.tf-radio-group {
+    display:   flex;
+    flex-wrap: wrap;
+    gap:       4px;
+}
+.tf-radio-input { display: none; } /* hidden, label does the work */
+
+.tf-radio-label {
+    display:       inline-flex;
+    align-items:   center;
+    gap:           5px;
+    padding:       5px 11px;
+    border-radius: 20px;
+    border:        1.5px solid var(--c-border);
+    background:    var(--c-white);
+    color:         var(--c-ink-3);
+    font-size:     12.5px;
+    font-weight:   500;
+    cursor:        pointer;
+    user-select:   none;
+    transition:    border-color var(--dur), background var(--dur), color var(--dur);
+}
+.tf-radio-label:hover { border-color: var(--c-indigo); color: var(--c-indigo); }
+.tf-radio-label--on {
+    background:   var(--c-indigo-lt);
+    border-color: var(--c-indigo);
+    color:        var(--c-indigo);
+    font-weight:  600;
+}
+
+/* ── Checkbox group ─────────────────────────────────────────────────────── */
+.tf-checkbox-group {
+    display:   flex;
+    flex-wrap: wrap;
+    gap:       4px;
+}
+.tf-check-input { display: none; } /* hidden */
+
+.tf-check-label {
+    display:       inline-flex;
+    align-items:   center;
+    gap:           5px;
+    padding:       5px 11px;
+    border-radius: 20px;
+    border:        1.5px solid var(--c-border);
+    background:    var(--c-white);
+    color:         var(--c-ink-3);
+    font-size:     12.5px;
+    font-weight:   500;
+    cursor:        pointer;
+    user-select:   none;
+    transition:    border-color var(--dur), background var(--dur), color var(--dur);
+}
+.tf-check-label:hover { border-color: var(--c-indigo); color: var(--c-indigo); }
+.tf-check-label--on {
+    background:   var(--c-indigo-lt);
+    border-color: var(--c-indigo);
+    color:        var(--c-indigo);
+    font-weight:  600;
+}
+
+/* ── Date / Date range ──────────────────────────────────────────────────── */
+.tf-date-range {
+    display:     flex;
+    align-items: center;
+    gap:         6px;
+}
+.tf-date {
+    flex:         1;
+    height:       34px;
+    background:   var(--c-white);
+    border:       1.5px solid var(--c-border);
+    border-radius: var(--r-md);
+    padding:      0 9px;
+    font-size:    12.5px;
+    color:        var(--c-ink);
+    font-family:  var(--f-body);
+    outline:      none;
+    transition:   border-color var(--dur), box-shadow var(--dur);
+}
+.tf-date:focus { border-color: var(--c-indigo); box-shadow: 0 0 0 3px var(--c-indigo-lt); }
+.tf-date.tf-ctrl--active { border-color: var(--c-indigo); background: #f5f3ff; }
+.tf-date-sep { font-size: 11px; color: var(--c-ink-4); flex-shrink: 0; }
+
+/* ── Number comparison ──────────────────────────────────────────────────── */
+.tf-numcmp {
+    display:     flex;
+    align-items: center;
+    gap:         6px;
+    flex-wrap:   wrap;
+}
+.tf-numcmp-op {
+    width:     80px;
+    flex-shrink: 0;
+    font-size: 14px;
+    text-align: center;
+}
+.tf-numcmp-val { flex: 1; min-width: 80px; }
+.tf-numcmp-to {
+    display:     flex;
+    align-items: center;
+    gap:         6px;
+    flex:        1;
+    min-width:   80px;
+}
+.tf-numcmp-to--hidden { display: none; }
+
+/* ── Colour dots (used by Status/Role option labels) ────────────────────── */
+.filter-dot {
+    display:       inline-block;
+    width:         7px;
+    height:        7px;
+    border-radius: 50%;
+    flex-shrink:   0;
+}
+.dot-emerald { background: var(--c-emerald); }
+.dot-amber   { background: var(--c-amber);   }
+.dot-rose    { background: var(--c-rose);    }
+.dot-sky     { background: var(--c-sky);     }
+.dot-indigo  { background: var(--c-indigo);  }
+.dot-neutral { background: var(--c-ink-4);   }
+
+/* ── Panel footer ───────────────────────────────────────────────────────── */
+.tf-footer {
+    display:         flex;
+    align-items:     center;
+    justify-content: space-between;
+    gap:             12px;
+    padding-top:     14px;
+    border-top:      1px solid var(--c-border);
+    margin-top:      4px;
+}
+.tf-summary {
+    display:     inline-flex;
+    align-items: center;
+    gap:         6px;
+    font-size:   12px;
+    color:       var(--c-indigo);
+    font-weight: 600;
+}
+.tf-footer-btns { display: flex; align-items: center; gap: 8px; }
+
+/* ── Product thumbnail in table ─────────────────────────────────────────── */
+.tbl-thumb-cell { padding-left: 16px !important; padding-right: 8px !important; }
+
+.prod-thumb {
+    width:         38px;
+    height:        38px;
+    border-radius: var(--r-sm);
+    object-fit:    cover;
+    border:        1px solid var(--c-border);
+    display:       block;
+    flex-shrink:   0;
+}
+.prod-thumb--empty {
+    background:      var(--c-canvas);
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    color:           var(--c-ink-4);
+}
+
+/* ── Seller name chip in table ──────────────────────────────────────────── */
+.tbl-seller {
+    display:       inline-flex;
+    align-items:   center;
+    gap:           4px;
+    font-size:     12.5px;
+    color:         var(--c-ink-2);
+    background:    var(--c-canvas);
+    border:        1px solid var(--c-border);
+    border-radius: 20px;
+    padding:       2px 8px;
+    white-space:   nowrap;
+}
+
+/* ── Page subtitle chip (filter-active indicator) ───────────────────────── */
+.pg-sub-chip {
+    display:       inline-flex;
+    align-items:   center;
+    margin-left:   6px;
+    padding:       2px 8px;
+    background:    var(--c-indigo-lt);
+    color:         var(--c-indigo);
+    border-radius: 20px;
+    font-size:     11px;
+    font-weight:   600;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+    .tf-grid { grid-template-columns: 1fr 1fr; }
+    .tf-panel-inner { padding: 14px 16px; }
+}
+@media (max-width: 560px) {
+    .tf-grid { grid-template-columns: 1fr; }
+    .tf-footer { flex-direction: column; align-items: stretch; }
+    .tf-footer-btns { justify-content: flex-end; }
+    .tf-numcmp { flex-direction: column; align-items: stretch; }
+    .tf-numcmp-op { width: 100%; }
+}

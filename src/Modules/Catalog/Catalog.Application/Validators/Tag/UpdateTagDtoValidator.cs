@@ -1,4 +1,4 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Tags;
 using FluentValidation;
 
 namespace Catalog.Application.Validators.Tag

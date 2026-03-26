@@ -1,0 +1,51 @@
+@using AdminPanel.Helpers
+@model AdminPanel.ViewModels.Common.TableColumnModel
+
+@{
+    var styles = new List<string>();
+    if (Model.Width    is not null) styles.Add($"width:{Model.Width}");
+    if (Model.Align != "left")     styles.Add($"text-align:{Model.Align}");
+    var styleAttr = styles.Count > 0 ? $"style=\"{string.Join(";", styles)}\"" : "";
+
+    var cssClass = string.Join(" ", new[] { Model.CssClass, Model.Sortable ? "th-sort" : "" }
+                                    .Where(c => !string.IsNullOrEmpty(c)));
+}
+
+@if (Model.Sortable)
+{
+    var state = SortHelper.SortState(Model.Column, Model.SortBy, Model.SortDirection);
+    var url   = SortHelper.SortUrl(Model.Request!, Model.Column, Model.SortBy, Model.SortDirection);
+
+    <th class="@cssClass" @Html.Raw(styleAttr)>
+        <a href="@url" class="sort-link sort-link--@state">
+            @Model.Label
+            <span class="sort-icon" aria-hidden="true">
+                @if (state == "asc")
+                {
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                        <path d="M5 2L9 8H1L5 2Z"/>
+                    </svg>
+                }
+                else if (state == "desc")
+                {
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                        <path d="M5 8L1 2H9L5 8Z"/>
+                    </svg>
+                }
+                else
+                {
+                    <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+                        <path d="M5 1L9 5H1L5 1Z"  opacity=".3"/>
+                        <path d="M5 11L1 7H9L5 11Z" opacity=".3"/>
+                    </svg>
+                }
+            </span>
+        </a>
+    </th>
+}
+else
+{
+    <th class="@cssClass" @Html.Raw(styleAttr)>
+        @Model.Label
+    </th>
+}

@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Catalog.Application.DTOs;
+using Catalog.Application.DTOs.Products;
 using Catalog.Application.Interfaces;
 using Catalog.Application.Services.Interface;
 using Catalog.Domain.Entities;

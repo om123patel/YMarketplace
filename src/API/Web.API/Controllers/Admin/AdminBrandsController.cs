@@ -1,4 +1,6 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Brands;
+using Catalog.Application.DTOs.Categories;
+using Catalog.Application.Services;
 using Catalog.Application.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,6 +17,15 @@ namespace Web.API.Controllers.Admin
         public AdminBrandsController(IBrandService brandService)
         {
             _brandService = brandService;
+        }
+
+        [HttpGet("GetPaged")]
+        public async Task<IActionResult> GetPaged(
+           [FromQuery] BrandFilterRequest filter,
+           CancellationToken ct)
+        {
+            var result = await _brandService.GetPagedAsync(filter, ct);
+            return HandleResult(result);
         }
 
         // GET api/admin/brands

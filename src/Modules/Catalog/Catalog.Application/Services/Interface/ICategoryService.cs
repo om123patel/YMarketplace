@@ -1,10 +1,12 @@
-﻿using Catalog.Application.DTOs;
+﻿using Catalog.Application.DTOs.Categories;
 using Shared.Application.Models;
 
 namespace Catalog.Application.Services.Interface
 {
     public interface ICategoryService
     {
+        Task<Result<PagedList<CategoryDto>>> GetPagedAsync(
+            CategoryFilterRequest filter, CancellationToken ct = default);
         Task<Result<CategoryDto>> GetByIdAsync(int id, CancellationToken ct = default);
         Task<Result<IEnumerable<CategoryDto>>> GetAllActiveAsync(CancellationToken ct = default);
         Task<Result<IEnumerable<CategoryDto>>> GetRootCategoriesAsync(CancellationToken ct = default);

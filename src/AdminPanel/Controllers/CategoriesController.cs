@@ -20,55 +20,56 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Index(
             string? search, string? status,
             string sortBy = "name", string sortDirection = "asc",
+            int page = 1, int pageSize = 10,
             CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _categories.GetCategoriesAsync(token);
-            var all = result?.Data ?? [];
+            var result = await _categories.GetPaged(token,
+                page, pageSize, search, status, sortBy, sortDirection);
 
-            var q = all.AsEnumerable();
-            if (!string.IsNullOrWhiteSpace(search))
-                q = q.Where(c => c.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                               || c.Slug.Contains(search, StringComparison.OrdinalIgnoreCase));
-            if (status == "active") q = q.Where(c => c.IsActive);
-            if (status == "inactive") q = q.Where(c => !c.IsActive);
+            var data = result?.Data;
+            List<CategoryItem> items;
 
-            var items = q.Select(c => new CategoryItem
+            if (data?.Items?.Any() == true)
             {
-                Id = c.Id,
-                Name = c.Name,
-                Slug = c.Slug,
-                Description = c.Description,
-                ParentId = c.ParentId,
-                ParentName = c.ParentName,
-                IsActive = c.IsActive,
-                SortOrder = c.SortOrder,
-                ProductCount = c.ProductCount,
-                ChildCount = all.Count(x => x.ParentId == c.Id),
-                Depth = c.ParentId.HasValue ? 1 : 0
-            }).ToList();
+                // Build a lookup of parentId -> child count to avoid O(n^2) counting.
+                var parentCounts = data.Items
+                    .Where(x => x.ParentId.HasValue)
+                    .GroupBy(x => x.ParentId!.Value)
+                    .ToDictionary(g => g.Key, g => g.Count());
 
-            items = (sortBy, sortDirection) switch
+                items = data.Items.Select(c => new CategoryItem
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Slug = c.Slug,
+                    Description = c.Description,
+                    ParentId = c.ParentId,
+                    ParentName = c.ParentName,
+                    IsActive = c.IsActive,
+                    SortOrder = c.SortOrder,
+                    ProductCount = c.ProductCount,
+                    ChildCount = parentCounts.TryGetValue(c.Id, out var cc) ? cc : 0,
+                    Depth = c.ParentId.HasValue ? 1 : 0
+                }).ToList();
+            }
+            else
             {
-                ("name", "desc") => items.OrderByDescending(i => i.Name).ToList(),
-                ("products", "asc") => items.OrderBy(i => i.ProductCount).ToList(),
-                ("products", "desc") => items.OrderByDescending(i => i.ProductCount).ToList(),
-                ("sort", "asc") => items.OrderBy(i => i.SortOrder).ToList(),
-                ("sort", "desc") => items.OrderByDescending(i => i.SortOrder).ToList(),
-                _ => items.OrderBy(i => i.Name).ToList()
-            };
+                items = new List<CategoryItem>();
+            }
 
             var vm = new CategoryListViewModel
             {
                 Items = items,
-                TotalCount = items.Count,
-                Page = 1,
-                PageSize = items.Count == 0 ? 20 : items.Count,
+                TotalCount = data?.TotalCount ?? 0,
+                Page = data?.Page ?? page,
+                PageSize = data?.PageSize ?? pageSize,
                 Search = search,
                 StatusFilter = status,
                 SortBy = sortBy,
                 SortDirection = sortDirection
             };
+
             vm.BuildRouteData();
             return View(vm);
         }
@@ -201,3 +202,21 @@ namespace AdminPanel.Controllers
         }
     }
 }
+/* Pseudocode / Plan (detailed):
+   1. Retrieve access token (fall back to empty string).
+   2. Call the paging API to get categories (preserve original call signature).
+   3. Cache the returned Data in a local variable to avoid repeated null-conditional access.
+   4. If there are no items, prepare an empty list for the view model.
+   5. If items exist:
+      a. Build a dictionary that maps parentId -> number of children by grouping Items on ParentId.
+         - Filter out null ParentId values before grouping.
+         - This makes child-count lookup O(1) per item instead of O(n) per item.
+      b. Project each item to CategoryItem:
+         - Copy scalar properties directly.
+         - Determine ChildCount by looking up in the parentCounts dictionary.
+         - Determine Depth the same as original (1 if ParentId.HasValue else 0).
+      c. Materialize projection to a List once.
+   6. Build the CategoryListViewModel using data from the API response (or fallbacks).
+   7. Call vm.BuildRouteData() and return the view.
+   8. Keep cancellation token usage and API signature unchanged to avoid breaking interface contracts.
+*/

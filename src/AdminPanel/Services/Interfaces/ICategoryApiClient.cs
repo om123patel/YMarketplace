@@ -1,11 +1,18 @@
-﻿// AdminPanel/Services/Interfaces/ICategoryApiClient.cs
-using AdminPanel.Dtos.Categories;
+﻿using AdminPanel.Dtos.Categories;
+using AdminPanel.Dtos.Common;
 using AdminPanel.Models;
 
 namespace AdminPanel.Services.Interfaces
 {
     public interface ICategoryApiClient
     {
+        Task<ApiResponse<PagedResult<CategoryDto>>?> GetPaged(string token, 
+            int page, int pageSize,
+            string? search = null, 
+            string? status = null,
+            string sortBy = "name",
+            string sortDirection = "asc");
+
         Task<ApiResponse<List<CategoryDto>>?> GetCategoriesAsync(string token);
         Task<ApiResponse<CategoryDto>?> GetCategoryByIdAsync(string token, int id);
         Task<ApiResponse<CategoryDto>?> CreateCategoryAsync(

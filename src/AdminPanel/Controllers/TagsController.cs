@@ -1,6 +1,7 @@
 using AdminPanel.Dtos.Tags;
 using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
+using AdminPanel.ViewModels.Brands;
 using AdminPanel.ViewModels.Tags;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,42 +19,43 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Index(
              string? search,
              string sortBy = "name", string sortDirection = "asc",
+              int page = 1, int pageSize = 10,
              CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
-            var result = await _tags.GetTagsAsync(token);
 
-            var q = (result?.Data ?? []).AsEnumerable();
-            if (!string.IsNullOrWhiteSpace(search))
-                q = q.Where(t => t.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
-                               || t.Slug.Contains(search, StringComparison.OrdinalIgnoreCase));
+            var result = await _tags.GetPaged(token,
+                page, pageSize, search, string.Empty, sortBy, sortDirection);
 
-            var items = q.Select(t => new TagItem
+            var data = result?.Data;
+            List<TagItem> items;
+            if (data?.Items?.Any() == true)
             {
-                Id = t.Id,
-                Name = t.Name,
-                Slug = t.Slug,
-                ProductCount = t.ProductCount,
-                CreatedAt = t.CreatedAt
-            }).ToList();
-
-            items = (sortBy, sortDirection) switch
+                items = data.Items.Select(t => new TagItem
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Slug = t.Slug,
+                    ProductCount = t.ProductCount,
+                    CreatedAt = t.CreatedAt
+                }).ToList();
+            }
+            else
             {
-                ("name", "desc") => items.OrderByDescending(i => i.Name).ToList(),
-                ("products", "asc") => items.OrderBy(i => i.ProductCount).ToList(),
-                ("products", "desc") => items.OrderByDescending(i => i.ProductCount).ToList(),
-                ("created", "asc") => items.OrderBy(i => i.CreatedAt).ToList(),
-                ("created", "desc") => items.OrderByDescending(i => i.CreatedAt).ToList(),
-                _ => items.OrderBy(i => i.Name).ToList()
-            };
+                items = new List<TagItem>();
+            }
+
+
+            
 
             var vm = new TagListViewModel
             {
                 Items = items,
-                TotalCount = items.Count,
-                Page = 1,
-                PageSize = items.Count == 0 ? 20 : items.Count,
+                TotalCount = data?.TotalCount ?? 0,
+                Page = data?.Page ?? page,
+                PageSize = data?.PageSize ?? pageSize,
                 Search = search,
+                StatusFilter = string.Empty,
                 SortBy = sortBy,
                 SortDirection = sortDirection
             };
