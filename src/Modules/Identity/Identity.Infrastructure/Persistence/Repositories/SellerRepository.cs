@@ -4,59 +4,34 @@ using Identity.Domain.Entities;
 using Identity.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Models;
+using Shared.Infrastructure.Persistence;
 using System.Data;
 using System.Globalization;
 
 namespace Identity.Infrastructure.Persistence.Repositories
 {
-    public class SellerRepository : ISellerRepository
+    public class SellerRepository : BaseRepository<Seller, Guid, IdentityDbContext>, ISellerRepository
     {
-        private readonly IdentityDbContext _db;
-
-        public SellerRepository(IdentityDbContext db) => _db = db;
-
-        public async Task<Seller?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        {
-            return await _db.Sellers
-                .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
-        }
+        public SellerRepository(IdentityDbContext db) : base(db) { }
 
         public async Task<Seller?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _db.Sellers
-                .FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
+            return await DbSet
+                .FirstOrDefaultAsync(x => x.UserId == userId, cancellationToken);
         }
 
         public async Task<bool> ExistsByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            return await _db.Sellers
-                .AnyAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
-        }
-
-        public async Task AddAsync(Seller seller, CancellationToken cancellationToken = default)
-        {
-            await _db.Sellers.AddAsync(seller, cancellationToken);
-        }
-
-        public void Update(Seller seller)
-        {
-            _db.Sellers.Update(seller);
-        }
-
-        public async Task<IReadOnlyList<Seller>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            return await _db.Sellers
-                .Where(x => !x.IsDeleted)
-                .ToListAsync(cancellationToken);
+            return await DbSet
+                .AnyAsync(x => x.UserId == userId, cancellationToken);
         }
 
         public async Task<PagedList<SellerDto>> GetPagedAsync(int page, int pageSize, string? status,
-    string? search, string ? sortBy = null, string? sortDirection = null,
+    string? search, string? sortBy = null, string? sortDirection = null,
     CancellationToken ct = default)
         {
-            var query = _db.Sellers
+            var query = DbSet
                 .Include(s => s.User) // 🔥 REQUIRED
-                .Where(s => !s.IsDeleted)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(status))

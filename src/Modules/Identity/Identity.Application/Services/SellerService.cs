@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using Identity.Application.DTOs.Seller;
 using Identity.Application.Interfaces;
 using Identity.Application.Services.Interfaces;
@@ -11,63 +12,69 @@ namespace Identity.Application.Services
 {
     public class SellerService : ISellerService
     {
-        private readonly ISellerRepository _sellerRepo;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ISellerRepository _sellerRepository;
+        private readonly IIdentityUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IValidator<CreateSellerDto> _createValidator;
+        private readonly IValidator<UpdateSellerDto> _updateValidator;
 
         public SellerService(
-            ISellerRepository sellerRepo,
-            IUnitOfWork unitOfWork,
-            IMapper mapper)
+            ISellerRepository sellerRepository,
+            IIdentityUnitOfWork unitOfWork,
+            IMapper mapper,
+            IValidator<CreateSellerDto> createValidator,
+            IValidator<UpdateSellerDto> updateValidator)
         {
-            _sellerRepo = sellerRepo;
+            _sellerRepository = sellerRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
         }
 
-        #region Create
-
-        public async Task<Result<Guid>> CreateAsync(
-            CreateSellerDto command,
+        public async Task<Result<CreateSellerDto>> CreateAsync(
+            CreateSellerDto dto,
             CancellationToken ct = default)
         {
-            var exists = await _sellerRepo.ExistsByUserIdAsync(command.UserId, ct);
+            // 1. Validate
+            var validation = await _createValidator.ValidateAsync(dto, ct);
+            if (!validation.IsValid)
+                return Result<CreateSellerDto>.Failure(
+                    string.Join(", ", validation.Errors.Select(e => e.ErrorMessage)),
+                    "VALIDATION_FAILED");
 
-            if (exists)
-                return Result<Guid>.Failure(
-                    "Seller already exists for this user.",
-                    "SELLER_ALREADY_EXISTS");
+            // 2. Check UserId uniqueness
+            if (await _sellerRepository.ExistsByUserIdAsync(dto.UserId, ct))
+                return Result<CreateSellerDto>.Failure(
+                    "Seller already exists for this user.", "SELLER_ALREADY_EXISTS");
 
             var address = new Address(
-                command.Address.AddressLine1,
-                command.Address.AddressLine2,
-                command.Address.City,
-                command.Address.State,
-                command.Address.PostalCode,
-                command.Address.Country);
+                dto.Address.AddressLine1,
+                dto.Address.AddressLine2,
+                dto.Address.City,
+                dto.Address.State,
+                dto.Address.PostalCode,
+                dto.Address.Country);
 
             var seller = Seller.Create(
-                command.UserId,
-                command.BusinessName,
-                command.BusinessEmail,
-                command.BusinessPhone,
+                dto.UserId,
+                dto.BusinessName,
+                dto.BusinessEmail,
+                dto.BusinessPhone,
                 address);
 
-            await _sellerRepo.AddAsync(seller, ct);
+            
+            await _sellerRepository.AddAsync(seller, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return Result<Guid>.Success(seller.Id);
+            return Result<CreateSellerDto>.Success(_mapper.Map<CreateSellerDto>(seller));
         }
-
-        #endregion
-
-        #region Get
 
         public async Task<Result<SellerDto>> GetByIdAsync(
             Guid id,
             CancellationToken ct = default)
         {
-            var seller = await _sellerRepo.GetByIdAsync(id, ct);
+            var seller = await _sellerRepository.GetByIdAsync(id, ct);
 
             if (seller is null || seller.IsDeleted)
                 return Result<SellerDto>.Failure(
@@ -83,7 +90,8 @@ namespace Identity.Application.Services
             string? sortBy = null, string? sortDirection = null,
             CancellationToken ct = default)
         {
-            var paged = await _sellerRepo.GetPagedAsync(page, pageSize, status, search, sortBy, sortDirection, ct);
+            var paged = await _sellerRepository.GetPagedAsync(
+                page, pageSize, status, search, sortBy, sortDirection, ct);
 
             var mapped = new PagedList<SellerDto>(
                 paged.Items.Select(s => _mapper.Map<SellerDto>(s)).ToList(),
@@ -94,16 +102,12 @@ namespace Identity.Application.Services
             return Result<PagedList<SellerDto>>.Success(mapped);
         }
 
-        #endregion
-
-        #region Approval
-
         public async Task<Result> ApproveAsync(
             Guid id,
             Guid adminId,
             CancellationToken ct = default)
         {
-            var seller = await _sellerRepo.GetByIdAsync(id, ct);
+            var seller = await _sellerRepository.GetByIdAsync(id, ct);
 
             if (seller is null || seller.IsDeleted)
                 return Result.Failure("Seller not found.", "SELLER_NOT_FOUND");
@@ -112,12 +116,18 @@ namespace Identity.Application.Services
             {
                 seller.Approve(adminId);
             }
+            catch (InvalidOperationException ex)
+            {
+                return Result.Failure(ex.Message, "INVALID_STATUS_TRANSITION");
+            }
             catch (Shared.Domain.Exceptions.DomainException ex)
             {
                 return Result.Failure(ex.Message, ex.Code);
             }
 
-            _sellerRepo.Update(seller);
+            
+             _sellerRepository.Update(seller);
+
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
@@ -129,7 +139,7 @@ namespace Identity.Application.Services
             string reason,
             CancellationToken ct = default)
         {
-            var seller = await _sellerRepo.GetByIdAsync(id, ct);
+            var seller = await _sellerRepository.GetByIdAsync(id, ct);
 
             if (seller is null || seller.IsDeleted)
                 return Result.Failure("Seller not found.", "SELLER_NOT_FOUND");
@@ -138,24 +148,24 @@ namespace Identity.Application.Services
             {
                 seller.Reject(adminId, reason);
             }
+            catch (InvalidOperationException ex)
+            {
+                return Result.Failure(ex.Message, "INVALID_STATUS_TRANSITION");
+            }
             catch (Shared.Domain.Exceptions.DomainException ex)
             {
                 return Result.Failure(ex.Message, ex.Code);
             }
 
-            _sellerRepo.Update(seller);
+            _sellerRepository.Update(seller);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
         }
 
-        #endregion
-
-        #region Status
-
         public async Task<Result> SuspendAsync(Guid id, CancellationToken ct = default)
         {
-            var seller = await _sellerRepo.GetByIdAsync(id, ct);
+            var seller = await _sellerRepository.GetByIdAsync(id, ct);
 
             if (seller is null || seller.IsDeleted)
                 return Result.Failure("Seller not found.", "SELLER_NOT_FOUND");
@@ -164,12 +174,12 @@ namespace Identity.Application.Services
             {
                 seller.Suspend();
             }
-            catch (Shared.Domain.Exceptions.DomainException ex)
+            catch (InvalidOperationException ex)
             {
-                return Result.Failure(ex.Message, ex.Code);
+                return Result.Failure(ex.Message, "INVALID_STATUS_TRANSITION");
             }
 
-            _sellerRepo.Update(seller);
+            _sellerRepository.Update(seller);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
@@ -177,28 +187,31 @@ namespace Identity.Application.Services
 
         public async Task<Result> ActivateAsync(Guid id, CancellationToken ct = default)
         {
-            var seller = await _sellerRepo.GetByIdAsync(id, ct);
+            var seller = await _sellerRepository.GetByIdAsync(id, ct);
 
             if (seller is null || seller.IsDeleted)
                 return Result.Failure("Seller not found.", "SELLER_NOT_FOUND");
 
-            seller.Activate();
+            try
+            {
+                seller.Activate();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result.Failure(ex.Message, "INVALID_STATUS_TRANSITION");
+            }
 
-            _sellerRepo.Update(seller);
+            _sellerRepository.Update(seller);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
         }
 
-        #endregion
-
-        #region Update
-
         public async Task<Result> UpdateAsync(
             UpdateSellerDto command,
             CancellationToken ct = default)
         {
-            var seller = await _sellerRepo.GetByIdAsync(command.Id, ct);
+            var seller = await _sellerRepository.GetByIdAsync(command.Id, ct);
 
             if (seller is null || seller.IsDeleted)
                 return Result.Failure("Seller not found.", "SELLER_NOT_FOUND");
@@ -210,12 +223,10 @@ namespace Identity.Application.Services
                 command.Description,
                 command.WebsiteUrl);
 
-            _sellerRepo.Update(seller);
+             _sellerRepository.Update(seller);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return Result.Success();
         }
-
-        #endregion
     }
 }

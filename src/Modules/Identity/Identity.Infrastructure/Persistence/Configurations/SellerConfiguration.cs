@@ -42,10 +42,10 @@ namespace Identity.Infrastructure.Persistence.Configurations
 
             // ✅ FIX 2: FK mapping
             builder.HasOne(x => x.User)
-            .WithMany() 
-            .HasForeignKey(x => x.UserId)
-            .HasConstraintName("FK_Sellers_Users")
-            .OnDelete(DeleteBehavior.Cascade);
+     .WithMany(u => u.Sellers)
+     .HasForeignKey(x => x.UserId)
+     .IsRequired() // 🔥 ADD THIS
+     .OnDelete(DeleteBehavior.Cascade);
 
             builder.Property(x => x.TotalRevenue)
                 .HasColumnType("decimal(18,4)");
@@ -55,6 +55,13 @@ namespace Identity.Infrastructure.Persistence.Configurations
 
             builder.Property(x => x.RowVersion)
                 .IsRowVersion();
+
+            // Soft delete global filter
+            builder.HasQueryFilter(u => !u.IsDeleted);
+
+            builder.Property(x => x.UserId)
+    .IsRequired();
+            builder.Ignore("UserId1"); // 🔥 if exists → EF will crash early
         }
     }
 }

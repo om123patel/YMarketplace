@@ -16,7 +16,7 @@ namespace Identity.Application.Services
         private readonly IUserRepository _userRepo;
         private readonly IRefreshTokenRepository _refreshTokenRepo;
         private readonly ITokenService _tokenService;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IIdentityUnitOfWork _unitOfWork;
         private readonly IEventBus _eventBus;
         private readonly IPasswordHasher _passwordHasher;
 
@@ -24,7 +24,7 @@ namespace Identity.Application.Services
             IUserRepository userRepo,
             IRefreshTokenRepository refreshTokenRepo,
             ITokenService tokenService,
-            IUnitOfWork unitOfWork,
+            IIdentityUnitOfWork unitOfWork,
             IEventBus eventBus,
             IPasswordHasher passwordHasher)
         {

@@ -32,7 +32,10 @@ namespace Shared.Infrastructure.Persistence
             => await DbSet.AddAsync(entity, cancellationToken);
 
         public virtual void Update(TEntity entity)
-            => DbSet.Update(entity);
+        {
+            DbSet.Update(entity);           
+        }
+        
 
         public virtual void Remove(TEntity entity)
             => DbSet.Remove(entity);

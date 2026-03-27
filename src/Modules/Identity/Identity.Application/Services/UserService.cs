@@ -10,12 +10,12 @@ namespace Identity.Application.Services
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepo;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IIdentityUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
 
         public UserService(
             IUserRepository userRepo,
-            IUnitOfWork unitOfWork,
+            IIdentityUnitOfWork unitOfWork,
             IMapper mapper)
         {
             _userRepo = userRepo;

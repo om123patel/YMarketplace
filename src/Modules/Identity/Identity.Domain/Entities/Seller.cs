@@ -1,12 +1,13 @@
 ﻿using Identity.Domain.Enums;
 using Shared.Domain.Abstractions;
 using Shared.Domain.Primitives;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Identity.Domain.Entities
 {
     public class Seller : AggregateRoot<Guid>, IConcurrencyToken
     {
-        public Seller() { }
+        private Seller() { }
         public Guid UserId { get; private set; }
 
         public string BusinessName { get; private set; }
@@ -36,6 +37,7 @@ namespace Identity.Domain.Entities
 
         public byte[]? RowVersion { get; private set; }
 
+        [ForeignKey(nameof(UserId))] // 🔥 ADD THIS
         public User User { get; private set; }
 
         #region Factory

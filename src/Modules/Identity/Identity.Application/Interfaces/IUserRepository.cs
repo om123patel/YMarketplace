@@ -4,9 +4,8 @@ using Shared.Application.Models;
 
 namespace Identity.Application.Interfaces
 {
-    public interface IUserRepository
+    public interface IUserRepository : IRepository<User, Guid>
     {
-        Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default);
         Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
         Task<bool> ExistsByEmailAsync(string email, CancellationToken ct = default);
         Task<PagedList<User>> GetPagedAsync(
@@ -14,8 +13,7 @@ namespace Identity.Application.Interfaces
             string? role, string? status,
             string? search,
             CancellationToken ct = default);
-        Task AddAsync(User user, CancellationToken ct = default);
-        void Update(User user);
+        
     }
 
 }

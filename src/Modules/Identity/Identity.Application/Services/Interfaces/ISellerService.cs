@@ -5,7 +5,7 @@ namespace Identity.Application.Services.Interfaces
 {
     public interface ISellerService
     {
-        Task<Result<Guid>> CreateAsync(CreateSellerDto command, CancellationToken ct = default);
+        Task<Result<CreateSellerDto>> CreateAsync(CreateSellerDto command, CancellationToken ct = default);
 
         Task<Result<SellerDto>> GetByIdAsync(Guid id, CancellationToken ct = default);
 

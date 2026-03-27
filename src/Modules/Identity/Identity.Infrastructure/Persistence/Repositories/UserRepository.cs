@@ -7,23 +7,19 @@ using Shared.Infrastructure.Persistence;
 
 namespace Identity.Infrastructure.Persistence.Repositories
 {
-    public class UserRepository : IUserRepository
+    public class UserRepository : BaseRepository<User, Guid, IdentityDbContext>,  IUserRepository
     {
-        private readonly IdentityDbContext _db;
-
-        public UserRepository(IdentityDbContext db) => _db = db;
-
-        public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => await _db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
+        
+        public UserRepository(IdentityDbContext db) : base(db) { }
 
         public async Task<User?> GetByEmailAsync(
             string email, CancellationToken ct = default)
-            => await _db.Users.FirstOrDefaultAsync(
+            => await DbSet.FirstOrDefaultAsync(
                 u => u.Email == email.ToLowerInvariant(), ct);
 
         public async Task<bool> ExistsByEmailAsync(
             string email, CancellationToken ct = default)
-            => await _db.Users.AnyAsync(
+            => await DbSet.AnyAsync(
                 u => u.Email == email.ToLowerInvariant(), ct);
 
         public async Task<PagedList<User>> GetPagedAsync(
@@ -31,7 +27,7 @@ namespace Identity.Infrastructure.Persistence.Repositories
             string? role, string? status, string? search,
             CancellationToken ct = default)
         {
-            var query = _db.Users.AsQueryable();
+            var query = DbSet.AsQueryable();
 
          
 
@@ -74,11 +70,7 @@ namespace Identity.Infrastructure.Persistence.Repositories
             return new PagedList<User>(items, page, pageSize, total);
         }
 
-        public async Task AddAsync(User user, CancellationToken ct = default)
-            => await _db.Users.AddAsync(user, ct);
-
-        public void Update(User user)
-            => _db.Users.Update(user);
+        
     }
 
 

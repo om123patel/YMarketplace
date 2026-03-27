@@ -1,8 +1,9 @@
-﻿using Shared.Application.Interfaces;
+﻿using Identity.Application.Interfaces;
+using Shared.Application.Interfaces;
 
 namespace Identity.Infrastructure.Persistence.UnitOfWork
 {
-    public class IdentityUnitOfWork : IUnitOfWork
+    public class IdentityUnitOfWork : IIdentityUnitOfWork
     {
         private readonly IdentityDbContext _context;
 
@@ -13,7 +14,10 @@ namespace Identity.Infrastructure.Persistence.UnitOfWork
 
         public async Task<int> SaveChangesAsync(
             CancellationToken cancellationToken = default)
-            => await _context.SaveChangesAsync(cancellationToken);
+        {
+            return await _context.SaveChangesAsync(cancellationToken);
+        }
+
     }
 
 }

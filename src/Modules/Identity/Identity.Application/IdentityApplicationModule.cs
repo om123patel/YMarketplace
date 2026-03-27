@@ -13,6 +13,7 @@ namespace Identity.Application
         public static IServiceCollection AddIdentityApplication(
             this IServiceCollection services)
         {
+
             // ── Services ──
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserService, UserService>();

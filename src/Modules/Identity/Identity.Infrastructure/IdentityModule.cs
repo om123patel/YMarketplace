@@ -43,7 +43,7 @@ public static class IdentityModule
                 }));
 
         // ── 3. Unit of Work ────────────────────────────────────
-        services.AddScoped<IUnitOfWork, IdentityUnitOfWork>();
+        services.AddScoped<IIdentityUnitOfWork, IdentityUnitOfWork>();
 
         // ── 4. Repositories ────────────────────────────────────
         services.AddScoped<IUserRepository, UserRepository>();

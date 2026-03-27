@@ -15,8 +15,12 @@ namespace Identity.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+           // modelBuilder.Ignore("UserId1"); // force detection
             modelBuilder.HasDefaultSchema("identity");
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+           
+
             base.OnModelCreating(modelBuilder);
         }
     }
