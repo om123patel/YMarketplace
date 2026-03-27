@@ -1,0 +1,532 @@
+﻿@using AdminPanel.ViewModels.Seller
+@using AdminPanel.Helpers
+@model SellerDetailViewModel
+@{
+    ViewData["Title"] = Model.BusinessName;
+    var returnUrl = Url.Action("Detail", new { id = Model.Id });
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Sellers</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>@Model.BusinessName</span>
+        </div>
+        <h1 class="pg-title">@Model.BusinessName</h1>
+        <p class="pg-sub">
+            Seller account · @Model.FullName ·
+            <span class="@BadgeHelper.SellerStatus(Model.SellerStatus)">
+                @BadgeHelper.SellerStatusLabel(Model.SellerStatus)
+            </span>
+        </p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">← Back to Sellers</a>
+
+        @if (Model.CanApprove)
+        {
+            <form asp-action="Approve" asp-route-id="@Model.Id" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-primary btn-sm">✓ Approve Seller</button>
+            </form>
+        }
+
+        @if (Model.CanReject)
+        {
+            <button type="button" class="btn btn-outline btn-sm"
+                    onclick="document.getElementById('rejectPanel').style.display='block'">
+                Reject Application
+            </button>
+        }
+
+        @if (Model.CanSuspend)
+        {
+            <button type="button" class="btn btn-outline btn-sm"
+                    onclick="document.getElementById('suspendPanel').style.display='block'">
+                Suspend
+            </button>
+        }
+
+        @if (Model.CanActivate)
+        {
+            <form asp-action="Activate" asp-route-id="@Model.Id" method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-primary btn-sm">Reactivate Seller</button>
+            </form>
+        }
+    </div>
+</div>
+
+<partial name="_AlertBanner" />
+
+
+@if (Model.SellerStatus == "PendingApproval")
+{
+    <div class="alert alert-amber">
+        <div class="alert-icon">⏳</div>
+        <div class="alert-body">
+            <div class="alert-title">This seller application is awaiting your review</div>
+            <div class="alert-desc">
+                Review the business details below and either approve or reject the application.
+            </div>
+        </div>
+    </div>
+}
+
+
+@if (Model.SellerStatus == "Rejected" && !string.IsNullOrEmpty(Model.RejectionReason))
+{
+    <div class="alert alert-rose">
+        <div class="alert-icon">✕</div>
+        <div class="alert-body">
+            <div class="alert-title">Application Rejected</div>
+            <div class="alert-desc">@Model.RejectionReason</div>
+        </div>
+    </div>
+}
+
+
+@if (Model.CanReject)
+{
+    <div id="rejectPanel" style="display:none">
+        <div class="card" style="border-color:#fecdd3">
+            <div class="card-head" style="background:#fff8f8;border-color:#fecdd3">
+                <div class="card-title" style="color:var(--c-rose)">Reject Application</div>
+            </div>
+            <div class="card-body">
+                <form asp-action="Reject" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <div class="form-group" style="margin-bottom:16px">
+                        <label class="form-label">Reason <span>*</span></label>
+                        <textarea name="reason" class="form-textarea" rows="3"
+                                  placeholder="Explain why this application is being rejected…"
+                                  required></textarea>
+                        <span class="form-hint">The seller will see this reason.</span>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                onclick="document.getElementById('rejectPanel').style.display='none'">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger btn-sm">Confirm Rejection</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+
+@if (Model.CanSuspend)
+{
+    <div id="suspendPanel" style="display:none">
+        <div class="card" style="border-color:#fecdd3">
+            <div class="card-head" style="background:#fff8f8;border-color:#fecdd3">
+                <div class="card-title" style="color:var(--c-rose)">Suspend Seller</div>
+            </div>
+            <div class="card-body">
+                <form asp-action="Suspend" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <div class="form-group" style="margin-bottom:16px">
+                        <label class="form-label">Reason <span>*</span></label>
+                        <textarea name="reason" class="form-textarea" rows="3"
+                                  placeholder="Explain why this seller is being suspended…"
+                                  required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                onclick="document.getElementById('suspendPanel').style.display='none'">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger btn-sm">Confirm Suspend</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="detail-grid">
+
+  
+    <div class="detail-main">
+
+     
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">Seller Owner</div>
+            </div>
+            <div class="card-body">
+
+                <div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;
+                            padding-bottom:20px;border-bottom:1px solid var(--c-border)">
+                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                    {
+                        <img src="@Model.AvatarUrl" alt="@Model.FullName"
+                             style="width:56px;height:56px;border-radius:50%;object-fit:cover;
+                                    border:2px solid var(--c-border)" />
+                    }
+                    else
+                    {
+                        <div style="width:56px;height:56px;border-radius:50%;
+                                    background:var(--c-sky-lt);color:var(--c-sky);
+                                    display:flex;align-items:center;justify-content:center;
+                                    font-family:var(--f-display);font-size:22px;font-weight:800;
+                                    flex-shrink:0">
+                            @Model.FullName.FirstOrDefault()
+                        </div>
+                    }
+                    <div>
+                        <div style="font-size:15px;font-weight:700;color:var(--c-ink)">
+                            @Model.FullName
+                        </div>
+                        <div style="font-size:13px;color:var(--c-ink-3);margin-top:2px">
+                            @Model.Email
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                        {
+                            <div style="font-size:12.5px;color:var(--c-ink-4);margin-top:2px">
+                                @Model.PhoneNumber
+                            </div>
+                        }
+                        <div style="margin-top:8px">
+                            <span class="@BadgeHelper.UserStatus(Model.UserStatus)">
+                                @BadgeHelper.UserStatusLabel(Model.UserStatus)
+                            </span>
+                        </div>
+                    </div>
+                    <div style="margin-left:auto">
+                        <a asp-controller="Users" asp-action="Detail" asp-route-id="@Model.UserId"
+                           class="btn btn-outline btn-sm">
+                            View User
+                        </a>
+                    </div>
+                </div>
+
+                <div class="field-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <div style="font-size:13.5px;color:var(--c-ink);padding:9px 0">@Model.FullName</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <div style="font-size:13.5px;color:var(--c-ink);padding:9px 0">@Model.Email</div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Phone</label>
+                            <div style="font-size:13.5px;color:var(--c-ink);padding:9px 0">@Model.PhoneNumber</div>
+                        </div>
+                    }
+                    <div class="form-group">
+                        <label class="form-label">User Account Status</label>
+                        <div style="padding:9px 0">
+                            <span class="@BadgeHelper.UserStatus(Model.UserStatus)">
+                                @BadgeHelper.UserStatusLabel(Model.UserStatus)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+       
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">Business Details</div>
+            </div>
+            <div class="card-body">
+
+                @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                {
+                    <div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--c-border)">
+                        <img src="@Model.LogoUrl" alt="@Model.BusinessName logo"
+                             style="max-height:56px;max-width:180px;object-fit:contain;
+                                    border:1px solid var(--c-border);border-radius:var(--r-sm);
+                                    padding:8px;background:var(--c-white);display:block" />
+                    </div>
+                }
+
+                <div class="field-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Business Name</label>
+                        <div style="font-size:13.5px;color:var(--c-ink);font-weight:600;padding:9px 0">
+                            @Model.BusinessName
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.BusinessEmail))
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Business Email</label>
+                            <div style="font-size:13.5px;color:var(--c-ink);padding:9px 0">
+                                @Model.BusinessEmail
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.BusinessPhone))
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Business Phone</label>
+                            <div style="font-size:13.5px;color:var(--c-ink);padding:9px 0">
+                                @Model.BusinessPhone
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.WebsiteUrl))
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Website</label>
+                            <div style="padding:9px 0">
+                                <a href="@Model.WebsiteUrl" target="_blank" class="tbl-link">
+                                    @Model.WebsiteUrl.Replace("https://", "").Replace("http://", "").TrimEnd('/')
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Description))
+                {
+                    <div class="form-group" style="margin-top:4px">
+                        <label class="form-label">Description</label>
+                        <div style="font-size:13.5px;color:var(--c-ink-2);line-height:1.6;
+                                    padding:10px 12px;background:var(--c-canvas);
+                                    border:1px solid var(--c-border);border-radius:var(--r-md);
+                                    margin-top:4px">
+                            @Model.Description
+                        </div>
+                    </div>
+                }
+
+            </div>
+        </div>
+
+   
+        @if (!string.IsNullOrEmpty(Model.City) || !string.IsNullOrEmpty(Model.Country))
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Location</div>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        @if (!string.IsNullOrEmpty(Model.City))
+                        {
+                            <div class="form-group">
+                                <label class="form-label">City</label>
+                                <div style="font-size:13.5px;color:var(--c-ink);padding:9px 0">@Model.City</div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.Country))
+                        {
+                            <div class="form-group">
+                                <label class="form-label">Country</label>
+                                <div style="font-size:13.5px;color:var(--c-ink);padding:9px 0">@Model.Country</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+     
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">Performance</div>
+            </div>
+            <div class="card-body">
+                <div class="field-grid-2" style="gap:16px">
+
+                    <div style="background:var(--c-canvas);border:1px solid var(--c-border);
+                                border-radius:var(--r-lg);padding:16px;text-align:center">
+                        <div style="font-family:var(--f-display);font-size:28px;font-weight:800;
+                                    color:var(--c-ink);letter-spacing:-1px">
+                            @Model.TotalProducts
+                        </div>
+                        <div style="font-size:12px;color:var(--c-ink-3);margin-top:3px;font-weight:500">
+                            Total Products
+                        </div>
+                    </div>
+
+                    <div style="background:var(--c-canvas);border:1px solid var(--c-border);
+                                border-radius:var(--r-lg);padding:16px;text-align:center">
+                        <div style="font-family:var(--f-display);font-size:28px;font-weight:800;
+                                    color:var(--c-ink);letter-spacing:-1px">
+                            @Model.TotalOrders
+                        </div>
+                        <div style="font-size:12px;color:var(--c-ink-3);margin-top:3px;font-weight:500">
+                            Total Orders
+                        </div>
+                    </div>
+
+                    <div style="background:var(--c-canvas);border:1px solid var(--c-border);
+                                border-radius:var(--r-lg);padding:16px;text-align:center">
+                        <div style="font-family:var(--f-display);font-size:28px;font-weight:800;
+                                    color:var(--c-emerald);letter-spacing:-1px">
+                            ₹@Model.TotalRevenue.ToString("N0")
+                        </div>
+                        <div style="font-size:12px;color:var(--c-ink-3);margin-top:3px;font-weight:500">
+                            Total Revenue
+                        </div>
+                    </div>
+
+                    <div style="background:var(--c-canvas);border:1px solid var(--c-border);
+                                border-radius:var(--r-lg);padding:16px;text-align:center">
+                        @if (Model.Rating.HasValue)
+                        {
+                            <div style="font-family:var(--f-display);font-size:28px;font-weight:800;
+                                        color:var(--c-amber);letter-spacing:-1px">
+                                @Model.Rating.Value.ToString("F1")
+                                <span style="font-size:16px;color:var(--c-amber)">★</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="font-family:var(--f-display);font-size:20px;font-weight:700;
+                                        color:var(--c-ink-4)">
+                                No rating
+                            </div>
+                        }
+                        <div style="font-size:12px;color:var(--c-ink-3);margin-top:3px;font-weight:500">
+                            Seller Rating
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+   
+    <div class="detail-side">
+
+        
+        <div class="card">
+            <div class="card-head"><div class="card-title">Details</div></div>
+            <div class="card-body">
+                <div class="detail-kv">
+                    <span class="detail-k">Seller Status</span>
+                    <span class="detail-v">
+                        <span class="@BadgeHelper.SellerStatus(Model.SellerStatus)">
+                            @BadgeHelper.SellerStatusLabel(Model.SellerStatus)
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Products</span>
+                    <span class="detail-v">@Model.TotalProducts</span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Orders</span>
+                    <span class="detail-v">@Model.TotalOrders</span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Revenue</span>
+                    <span class="detail-v tbl-mono">₹@Model.TotalRevenue.ToString("N0")</span>
+                </div>
+                @if (Model.ApprovedAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Approved</span>
+                        <span class="detail-v tbl-date">@Model.ApprovedAt.Value.ToString("dd MMM yyyy")</span>
+                    </div>
+                }
+                <div class="detail-kv">
+                    <span class="detail-k">Applied</span>
+                    <span class="detail-v tbl-date">@Model.CreatedAt.ToString("dd MMM yyyy")</span>
+                </div>
+            </div>
+        </div>
+
+       
+        <div class="card">
+            <div class="card-head"><div class="card-title">Actions</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+
+                @if (Model.CanApprove)
+                {
+                    <form asp-action="Approve" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        <button type="submit" class="btn btn-primary btn-sm"
+                                style="width:100%;justify-content:center">
+                            ✓ Approve Seller
+                        </button>
+                    </form>
+                }
+
+                @if (Model.CanReject)
+                {
+                    <button type="button" class="btn btn-outline btn-sm"
+                            style="width:100%;justify-content:center"
+                            onclick="document.getElementById('rejectPanel').style.display='block';
+                                     document.getElementById('rejectPanel').scrollIntoView({behavior:'smooth'})">
+                        Reject Application
+                    </button>
+                }
+
+                @if (Model.CanSuspend)
+                {
+                    <button type="button" class="btn btn-outline btn-sm"
+                            style="width:100%;justify-content:center"
+                            onclick="document.getElementById('suspendPanel').style.display='block';
+                                     document.getElementById('suspendPanel').scrollIntoView({behavior:'smooth'})">
+                        Suspend Seller
+                    </button>
+                }
+
+                @if (Model.CanActivate)
+                {
+                    <form asp-action="Activate" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        <button type="submit" class="btn btn-primary btn-sm"
+                                style="width:100%;justify-content:center">
+                            Reactivate Seller
+                        </button>
+                    </form>
+                }
+
+                <a asp-controller="Users" asp-action="Detail" asp-route-id="@Model.UserId"
+                   class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">
+                    View User Account
+                </a>
+
+                @if (Model.TotalProducts > 0)
+                {
+                    <a asp-controller="Products" asp-action="Seller"
+                       class="btn btn-ghost btn-sm"
+                       style="width:100%;justify-content:center">
+                        View Products (@Model.TotalProducts)
+                    </a>
+                }
+
+            </div>
+        </div>
+
+       
+        @if (Model.SellerStatus == "Rejected" && !string.IsNullOrEmpty(Model.RejectionReason))
+        {
+            <div class="card card--danger">
+                <div class="card-head card-head--danger">
+                    <div class="card-title card-title--danger">Rejection Reason</div>
+                </div>
+                <div class="card-body">
+                    <p class="danger-desc">@Model.RejectionReason</p>
+                </div>
+            </div>
+        }
+
+    </div>
+</div>

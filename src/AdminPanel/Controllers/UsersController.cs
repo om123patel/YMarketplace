@@ -57,9 +57,7 @@ namespace AdminPanel.Controllers
         }
 
 
-        // ══════════════════════════════════════════════════════
-        // GET /Users/{id}
-        // ══════════════════════════════════════════════════════
+        
         [HttpGet]
         [Route("Users/{id:guid}")]
         public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
@@ -97,9 +95,7 @@ namespace AdminPanel.Controllers
             return View(vm);
         }
 
-        // ══════════════════════════════════════════════════════
-        // POST /Users/{id}/Suspend
-        // ══════════════════════════════════════════════════════
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("Users/{id:guid}/Suspend")]
@@ -123,9 +119,7 @@ namespace AdminPanel.Controllers
             return RedirectBack(returnUrl, id);
         }
 
-        // ══════════════════════════════════════════════════════
-        // POST /Users/{id}/Activate
-        // ══════════════════════════════════════════════════════
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("Users/{id:guid}/Activate")]
@@ -143,9 +137,7 @@ namespace AdminPanel.Controllers
             return RedirectBack(returnUrl, id);
         }
 
-        // ══════════════════════════════════════════════════════
-        // POST /Users/{id}/Delete
-        // ══════════════════════════════════════════════════════
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("Users/{id:guid}/Delete")]
@@ -163,7 +155,7 @@ namespace AdminPanel.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ── Helpers ──────────────────────────────────────────
+
         private IActionResult RedirectBack(string? returnUrl, Guid id)
         {
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))

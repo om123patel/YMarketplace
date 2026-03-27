@@ -14,9 +14,7 @@ namespace AdminPanel.Controllers
         public SellersController(ISellerApiClient sellers, AuthTokenService tokens)
         { _sellers = sellers; _tokens = tokens; }
 
-        // ══════════════════════════════════════════════════════
-        // GET /Sellers
-        // ══════════════════════════════════════════════════════
+        
         public async Task<IActionResult> Index(
       string? search,
       string? sellerStatus,
@@ -144,9 +142,7 @@ namespace AdminPanel.Controllers
             return View(vm);
         }
 
-        // ══════════════════════════════════════════════════════
-        // POST /Sellers/{id}/Approve
-        // ══════════════════════════════════════════════════════
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("Sellers/{id:guid}/Approve")]
@@ -164,9 +160,7 @@ namespace AdminPanel.Controllers
             return RedirectBack(returnUrl, id);
         }
 
-        // ══════════════════════════════════════════════════════
-        // POST /Sellers/{id}/Reject
-        // ══════════════════════════════════════════════════════
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("Sellers/{id:guid}/Reject")]
@@ -190,9 +184,7 @@ namespace AdminPanel.Controllers
             return RedirectBack(returnUrl, id);
         }
 
-        // ══════════════════════════════════════════════════════
-        // POST /Sellers/{id}/Suspend
-        // ══════════════════════════════════════════════════════
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("Sellers/{id:guid}/Suspend")]
@@ -216,9 +208,7 @@ namespace AdminPanel.Controllers
             return RedirectBack(returnUrl, id);
         }
 
-        // ══════════════════════════════════════════════════════
-        // POST /Sellers/{id}/Activate
-        // ══════════════════════════════════════════════════════
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Route("Sellers/{id:guid}/Activate")]
@@ -236,7 +226,7 @@ namespace AdminPanel.Controllers
             return RedirectBack(returnUrl, id);
         }
 
-        // ── Helpers ──────────────────────────────────────────
+       
         private IActionResult RedirectBack(string? returnUrl, Guid id)
         {
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
