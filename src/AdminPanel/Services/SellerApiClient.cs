@@ -11,7 +11,7 @@ namespace AdminPanel.Services
         public SellerApiClient(HttpClient http, ILogger<SellerApiClient> logger)
             : base(http, logger) { }
 
-        public Task<ApiResponse<PagedResult<SellerDto>>?> GetSellersAsync(
+        public Task<ApiResponse<PagedResult<SellerDto>>?> GetPaged(
             string token, int page = 1, int pageSize = 20,
             string? search = null, string? status = null,
             string? sortBy = null, string? sortDirection = null)
@@ -26,7 +26,7 @@ namespace AdminPanel.Services
                 ["sortDirection"] = sortDirection
             });
             return GetAsync<ApiResponse<PagedResult<SellerDto>>>(
-                $"api/admin/sellers{q}", token);
+                $"api/admin/sellers/GetPaged{q}", token);
         }
 
         public Task<ApiResponse<SellerDto>?> GetSellerByIdAsync(

@@ -5,20 +5,7 @@
 @{
     ViewData["Title"] = "Sellers";
 
-    string StatusBadge(string s) => s switch
-    {
-        "Active" => "badge b-active",
-        "PendingApproval" => "badge b-pending",
-        "Rejected" => "badge b-rejected",
-        "Suspended" => "badge b-archived",
-        _ => "badge b-archived"
-    };
-
-    string StatusLabel(string s) => s switch
-    {
-        "PendingApproval" => "Pending",
-        _ => s
-    };
+   
 
     TableColumnModel Col(string label, string column, string? width = null) => new()
     {
@@ -57,20 +44,7 @@
     </div>
 </div>
 
-@if (TempData["Success"] is string ok)
-{
-    <div class="alert alert-emerald" id="alert-banner">
-        <div class="alert-icon">✓</div>
-        <div class="alert-body"><div class="alert-title">@ok</div></div>
-    </div>
-}
-@if (TempData["Error"] is string err)
-{
-    <div class="alert alert-rose" id="alert-banner">
-        <div class="alert-icon">✕</div>
-        <div class="alert-body"><div class="alert-title">@err</div></div>
-    </div>
-}
+<partial name="_AlertBanner" />
 
 @if (Model.PendingCount > 0 && string.IsNullOrEmpty(Model.SellerStatus))
 {
@@ -108,7 +82,7 @@
             <option value="">All Statuses</option>
             @foreach (var s in new[] { "PendingApproval", "Active", "Suspended", "Rejected" })
             {
-                <option value="@s" selected="@(Model.SellerStatus == s)">@StatusLabel(s)</option>
+                <option value="@s" selected="@(Model.SellerStatus == s)">@BadgeHelper.SellerStatusLabel(s)</option>
             }
         </select>
 
@@ -193,8 +167,8 @@
                             </td>
 
                             <td>
-                                <span class="@StatusBadge(s.SellerStatus)">
-                                    @StatusLabel(s.SellerStatus)
+                                <span class="@BadgeHelper.SellerStatus(s.SellerStatus)">
+                                    @BadgeHelper.SellerStatusLabel(s.SellerStatus)
                                 </span>
                             </td>
 
@@ -251,15 +225,18 @@
             </table>
         </div>
 
-        <partial name="_Pagination" model="@(new PaginationViewModel
-                                    {
-                                        Page = Model.Page,
-                                        PageSize = Model.PageSize,
-                                        TotalCount = Model.TotalCount,
-                                        RouteData = Model.RouteData,
-                                        Action = "Index",
-                                        Controller = "Sellers"
-                                    })" />
+       
+
+    <partial name="_Pagination" model="@(new PaginationViewModel
+                                {
+                                    Page = Model.Page,
+                                    PageSize = Model.PageSize,
+                                    TotalCount = Model.TotalCount,
+                                    RouteData = Model.RouteData,
+                                    Action = "Index",
+                                    Controller = "Sellers"
+                                })" />
+
         }
 
 </div>

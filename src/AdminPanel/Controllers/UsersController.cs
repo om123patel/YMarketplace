@@ -21,11 +21,12 @@ namespace AdminPanel.Controllers
         public async Task<IActionResult> Index(
             string? search, string? role, string? status,
             string sortBy = "createdat", string sortDirection = "desc",
-            int page = 1, CancellationToken ct = default)
+               int page = 1, int pageSize = 10,
+            CancellationToken ct = default)
         {
             var token = _tokens.GetAccessToken() ?? "";
             var result = await _users.GetUsersAsync(
-                token, page, 20, search, role, status, sortBy, sortDirection);
+                token, page, pageSize, search, role, status, sortBy, sortDirection);
 
             var vm = new UserListViewModel
             {

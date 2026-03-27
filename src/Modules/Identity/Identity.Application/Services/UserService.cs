@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Identity.Application.DTOs;
+using Identity.Application.DTOs.User;
 using Identity.Application.Interfaces;
 using Identity.Application.Services.Interfaces;
 using Shared.Application.Interfaces;

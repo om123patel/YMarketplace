@@ -88,6 +88,7 @@ namespace AdminPanel
             services.AddHttpClient<ITagApiClient, TagApiClient>(ConfigureClient);
             services.AddHttpClient<IAttributeApiClient, AttributeApiClient>(ConfigureClient);
             services.AddHttpClient<ISellerApiClient, SellerApiClient>(ConfigureClient);
+            services.AddHttpClient<IUserApiClient, UserApiClient>(ConfigureClient);
 
 
             // ──────────────────────────────────────────────────────────

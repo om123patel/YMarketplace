@@ -1,4 +1,4 @@
-﻿namespace Identity.Application.DTOs
+﻿namespace Identity.Application.DTOs.RefreshToken
 {
     public class RefreshTokenDto
     {

@@ -43,3 +43,15 @@ document.querySelectorAll('input[name="Name"]').forEach(nameInput => {
         slugInput.dataset.manuallyEdited = 'true';
     });
 });
+
+// ── Delete modal ──────────────────────────────────────────────
+function openDelModal(action, name) {
+    document.getElementById('delModalDesc').textContent =
+        name ? `Delete "${name}"? This cannot be undone.` : '';
+    document.getElementById('delForm').action = action;
+    document.getElementById('delModal').style.display = 'flex';
+}
+
+function closeDelModal() {
+    document.getElementById('delModal').style.display = 'none';
+}

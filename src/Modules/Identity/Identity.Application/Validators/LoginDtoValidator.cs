@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using Identity.Application.DTOs;
+using Identity.Application.DTOs.User;
 
 namespace Identity.Application.Validators
 {

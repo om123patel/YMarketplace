@@ -1,4 +1,4 @@
-﻿using Identity.Application.DTOs;
+﻿using Identity.Application.DTOs.User;
 using Identity.Application.Interfaces;
 using Identity.Application.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;

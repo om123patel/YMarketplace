@@ -1,4 +1,5 @@
 ﻿using Identity.Application.DTOs;
+using Identity.Application.DTOs.User;
 using Shared.Application.Models;
 
 namespace Identity.Application.Interfaces

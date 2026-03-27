@@ -4,29 +4,6 @@
 @model UserListViewModel
 @{
     ViewData["Title"] = "Users";
-
-    // string RoleBadge(string r) => r switch
-    // {
-    //     "Admin" => "badge b-active",
-    //     "Seller" => "badge b-pending",
-    //     "Buyer" => "badge b-draft",
-    //     _ => "badge b-archived"
-    // };
-
-    // string StatusBadge(string s) => s switch
-    // {
-    //     "Active" => "badge b-active",
-    //     "Suspended" => "badge b-rejected",
-    //     "PendingVerification" => "badge b-pending",
-    //     _ => "badge b-archived"
-    // };
-
-    // string StatusLabel(string s) => s switch
-    // {
-    //     "PendingVerification" => "Pending",
-    //     _ => s
-    // };
-
     TableColumnModel Col(string label, string column, string? width = null) => new()
     {
         Label = label,

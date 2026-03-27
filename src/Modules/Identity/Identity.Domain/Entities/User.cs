@@ -25,6 +25,8 @@ namespace Identity.Domain.Entities
         // Optimistic concurrency
         public byte[]? RowVersion { get; private set; }
 
+        public ICollection<Seller> Sellers { get; set; } = new List<Seller>();
+
         private User() { } // EF Core
 
         // ── Factory ────────────────────────────────────────────

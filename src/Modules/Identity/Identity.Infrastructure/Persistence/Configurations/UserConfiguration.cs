@@ -41,6 +41,8 @@ namespace Identity.Infrastructure.Persistence.Configurations
             // Soft delete global filter
             b.HasQueryFilter(u => !u.IsDeleted);
 
+        
+
             // Indexes
             b.HasIndex(u => u.Email)
                 .IsUnique()

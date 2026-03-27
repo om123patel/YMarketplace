@@ -1,5 +1,6 @@
 ﻿// Identity.Application/Services/AuthService.cs
 using Identity.Application.DTOs;
+using Identity.Application.DTOs.User;
 using Identity.Application.Interfaces;
 using Identity.Application.Services.Interfaces;
 using Identity.Domain.Entities;

@@ -7,7 +7,7 @@ namespace AdminPanel.Services.Interfaces
 {
     public interface ISellerApiClient
     {
-        Task<ApiResponse<PagedResult<SellerDto>>?> GetSellersAsync(
+        Task<ApiResponse<PagedResult<SellerDto>>?> GetPaged(
             string token, int page = 1, int pageSize = 20,
             string? search = null, string? status = null,
             string? sortBy = null, string? sortDirection = null);

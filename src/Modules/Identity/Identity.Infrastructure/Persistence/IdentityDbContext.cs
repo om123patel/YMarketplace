@@ -11,7 +11,7 @@ namespace Identity.Infrastructure.Persistence
 
         public DbSet<User> Users => Set<User>();
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-        public DbSet<VendorApplication> VendorApplications  => Set<VendorApplication>();
+        public DbSet<Seller> Sellers => Set<Seller>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

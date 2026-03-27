@@ -1,5 +1,6 @@
 ﻿using Identity.Application.Interfaces;
 using Identity.Domain.Entities;
+using Identity.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Shared.Application.Models;
 using Shared.Infrastructure.Persistence;
@@ -32,11 +33,30 @@ namespace Identity.Infrastructure.Persistence.Repositories
         {
             var query = _db.Users.AsQueryable();
 
+         
+
+
             if (!string.IsNullOrWhiteSpace(role))
-                query = query.Where(u => u.Role.ToString() == role);
+            {
+                // 1. Convert the input string to the Enum type first
+                if (Enum.TryParse<UserRole>(role, true, out var roleEnum))
+                {
+                    // 2. Filter using the typed enum value
+                    query = query.Where(u => u.Role == roleEnum);
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(status))
-                query = query.Where(u => u.Status.ToString() == status);
+            {
+                // 1. Convert the input string to the Enum type first
+                if (Enum.TryParse<UserStatus>(status, true, out var statusEnum))
+                {
+                    // 2. Filter using the typed enum value
+                    query = query.Where(u => u.Status == statusEnum);
+                }
+            }
+
+            
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(u =>

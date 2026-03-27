@@ -16,7 +16,7 @@ namespace Identity.Application
             // ── Services ──
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IVendorOnboardingService, VendorOnboardingService>();
+            services.AddScoped<ISellerService, SellerService>();
 
             // ── AutoMapper ──
             services.AddAutoMapper(cfg => { }, typeof(IdentityMappingProfile).Assembly);

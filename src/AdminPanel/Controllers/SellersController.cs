@@ -18,23 +18,44 @@ namespace AdminPanel.Controllers
         // GET /Sellers
         // ══════════════════════════════════════════════════════
         public async Task<IActionResult> Index(
-             string? search, string? sellerStatus,
-             string sortBy = "createdat", string sortDirection = "desc",
-             int page = 1, CancellationToken ct = default)
+      string? search,
+      string? sellerStatus,
+      string sortBy = "createdAt",
+      string sortDirection = "desc",
+      int page = 1,
+      int pageSize = 10,
+      CancellationToken ct = default)
         {
-            var token = _tokens.GetAccessToken() ?? "";
+            var token = _tokens.GetAccessToken() ?? string.Empty;
 
-            var listTask = _sellers.GetSellersAsync(token, page, 20,
-                                  search, sellerStatus, sortBy, sortDirection);
-            var pendingTask = _sellers.GetSellersAsync(token, 1, 1,
-                                  null, "PendingApproval");
+            // Fix: correct status value
+            var pendingStatus = "Pending";
+
+            var listTask = _sellers.GetPaged(
+                token,
+                page,
+                pageSize,
+                search,
+                sellerStatus,
+                sortBy,
+                sortDirection);
+
+            var pendingTask = _sellers.GetPaged(
+                token,
+                1,              // always first page
+                1,              // only need count
+                null,
+                pendingStatus,
+                null,
+                null);
 
             await Task.WhenAll(listTask, pendingTask);
 
-            var result = await listTask;
-            var vm = new SellerListViewModel
-            {
-                Items = result?.Data?.Items.Select(s => new SellerListItem
+            var listResult = await listTask;
+            var pendingResult = await pendingTask;
+
+            var items = listResult?.Data?.Items?
+                .Select(s => new SellerListItem
                 {
                     Id = s.Id,
                     UserId = s.UserId,
@@ -50,24 +71,31 @@ namespace AdminPanel.Controllers
                     TotalRevenue = s.TotalRevenue,
                     Rating = s.Rating,
                     CreatedAt = s.CreatedAt
-                }).ToList() ?? [],
-                Page = result?.Data?.Page ?? page,
-                PageSize = result?.Data?.PageSize ?? 20,
-                TotalCount = result?.Data?.TotalCount ?? 0,
+                })
+                .ToList() ?? new List<SellerListItem>();
+
+            var vm = new SellerListViewModel
+            {
+                Items = items,
+                Page = listResult?.Data?.Page ?? page,
+                PageSize = listResult?.Data?.PageSize ?? pageSize,
+                TotalCount = listResult?.Data?.TotalCount ?? 0,
                 Search = search,
                 SellerStatus = sellerStatus,
                 SortBy = sortBy,
                 SortDirection = sortDirection,
-                PendingCount = (await pendingTask)?.Data?.TotalCount ?? 0
+                PendingCount = pendingResult?.Data?.TotalCount ?? 0
             };
-            vm.BuildRouteData(new() { ["sellerStatus"] = sellerStatus });
+
+            vm.BuildRouteData(new Dictionary<string, string?>
+            {
+                ["sellerStatus"] = sellerStatus,
+                ["search"] = search
+            });
+
             return View(vm);
         }
 
-
-        // ══════════════════════════════════════════════════════
-        // GET /Sellers/{id}
-        // ══════════════════════════════════════════════════════
         [HttpGet]
         [Route("Sellers/{id:guid}")]
         public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
@@ -213,7 +241,7 @@ namespace AdminPanel.Controllers
         {
             if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
-            return RedirectToAction(nameof(Detail), new { id });
+            return RedirectToAction(nameof(Index), new { id });
         }
     }
 }
