@@ -1,0 +1,181 @@
+﻿@using AdminPanel.ViewModels.Orders
+@using AdminPanel.Helpers
+@model OrderListViewModel
+@{
+    ViewData["Title"] = "Orders";
+
+    TableColumnModel Col(string label, string column, string? width = null) => new()
+    {
+        Label = label,
+        Sortable = true,
+        Column = column,
+        SortBy = Model.SortBy,
+        SortDirection = Model.SortDirection,
+        Request = Context.Request,
+        Width = width
+    };
+
+    TableColumnModel Plain(string label, string? width = null, string align = "left") => new()
+    {
+        Label = label,
+        Sortable = false,
+        Width = width,
+        Align = align
+    };
+}
+
+<div class="pg-bar">
+    <div>
+        <h1 class="pg-title">Orders</h1>
+        <p class="pg-sub">@Model.TotalCount.ToString("N0") total orders</p>
+    </div>
+</div>
+
+<partial name="_AlertBanner" />
+
+<div class="card">
+
+    <form method="get" class="filter-bar">
+        <input type="hidden" name="sortBy" value="@Model.SortBy" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+
+        <div class="filter-search">
+            <svg class="filter-search-ico" width="14" height="14" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input name="search" value="@Model.Search"
+                   placeholder="Search order number…" class="filter-input" />
+        </div>
+
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            @foreach (var s in new[] { "Pending", "Confirmed", "Shipped", "Delivered", "Cancelled" })
+            {
+                <option value="@s" selected="@(Model.Status == s)">@s</option>
+            }
+        </select>
+
+        <select name="paymentStatus" class="filter-select">
+            <option value="">All Payments</option>
+            @foreach (var p in new[] { "Pending", "Paid", "Failed", "Refunded", "PartiallyRefunded" })
+            {
+                <option value="@p" selected="@(Model.PaymentStatus == p)">@p</option>
+            }
+        </select>
+
+        <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+        @if (!string.IsNullOrEmpty(Model.Search)
+                || !string.IsNullOrEmpty(Model.Status)
+                || !string.IsNullOrEmpty(Model.PaymentStatus))
+        {
+            <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
+        }
+    </form>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+            </div>
+            <div class="empty-title">No orders found</div>
+            <div class="empty-desc">Orders will appear here once buyers start placing them.</div>
+        </div>
+    }
+    else
+    {
+        <div class="tbl-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <partial name="_TableColumn" model="@Col("Order", "ordernumber")" />
+                        <partial name="_TableColumn" model="@Plain("Status", "130px")" />
+                        <partial name="_TableColumn" model="@Plain("Payment", "140px")" />
+                        <partial name="_TableColumn" model="@Plain("Items", "70px", "center")" />
+                        <partial name="_TableColumn" model="@Col("Total", "total", "110px")" />
+                        <partial name="_TableColumn" model="@Plain("Tracking", "140px")" />
+                        <partial name="_TableColumn" model="@Col("Placed", "createdat", "120px")" />
+                        <partial name="_TableColumn" model="@Plain("", "60px", "center")" />
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in Model.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div>
+                                    <a asp-action="Detail" asp-route-id="@o.Id"
+                                       class="tbl-link" style="font-weight:600;font-family:var(--f-display)">
+                                        @o.OrderNumber
+                                    </a>
+                                    <div class="tbl-meta">@o.CreatedAt.ToString("dd MMM yyyy")</div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="@BadgeHelper.OrderStatus(o.Status)">
+                                    @BadgeHelper.OrderStatusLabel(o.Status)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="@BadgeHelper.PaymentStatus(o.PaymentStatus)">
+                                    @o.PaymentStatus
+                                </span>
+                            </td>
+                            <td style="text-align:center">
+                                <span class="badge badge-gray">@o.ItemCount</span>
+                            </td>
+                            <td>
+                                <span class="price">
+                                    ₹@o.TotalAmount.ToString("N0")
+                                </span>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(o.TrackingNumber))
+                                {
+                                    <span class="tbl-mono" style="font-size:12px">
+                                        @o.TrackingNumber
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="tbl-meta">—</span>
+                                }
+                            </td>
+                            <td class="tbl-date">@o.CreatedAt.ToString("dd MMM yyyy")</td>
+                            <td style="text-align:center">
+                                <a asp-action="Detail" asp-route-id="@o.Id"
+                                   class="row-btn" title="View">
+                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"
+                                         stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+                                                         9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pagination" model="@(new PaginationViewModel
+                                    {
+                                        Page = Model.Page,
+                                        PageSize = Model.PageSize,
+                                        TotalCount = Model.TotalCount,
+                                        RouteData = Model.RouteData,
+                                        Action = "Index",
+                                        Controller = "Orders"
+                                    })" />
+        }
+
+</div>

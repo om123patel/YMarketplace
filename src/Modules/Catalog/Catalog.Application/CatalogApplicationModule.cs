@@ -3,7 +3,6 @@ using Catalog.Application.Services;
 using Catalog.Application.Services.Interface;
 using Catalog.Application.Validators.Product;
 using FluentValidation;
-
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Catalog.Application

@@ -55,3 +55,23 @@ function openDelModal(action, name) {
 function closeDelModal() {
     document.getElementById('delModal').style.display = 'none';
 }
+
+function openReject(actionUrl) {
+    const modal = document.querySelector('.js-modal');
+    const form = modal.querySelector('.js-modal-form');
+
+    form.action = actionUrl;
+
+    modal.style.display = 'flex';
+}
+
+// Generic close
+document.addEventListener("click", function (e) {
+    if (e.target.classList.contains('js-modal')) {
+        e.target.style.display = 'none';
+    }
+
+    if (e.target.classList.contains('js-modal-close')) {
+        e.target.closest('.js-modal').style.display = 'none';
+    }
+});

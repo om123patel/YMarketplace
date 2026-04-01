@@ -2,6 +2,7 @@
 using Identity.Infrastructure;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi.Models;
+using Orders.Infrastructure;
 using Serilog;
 using Shared.Infrastructure;
 using Web.API.Extensions;
@@ -107,7 +108,7 @@ namespace Web.API
             services.AddSharedInfrastructure(configuration);
             services.AddIdentityModule(configuration);
             services.AddCatalogModule(configuration);
-
+            services.AddOrdersModule(configuration);
             // ── JWT Bearer Events ──────────────────────────────────
             // API project owns ALL HTTP pipeline behavior.
             // Infrastructure only configured token validation rules.

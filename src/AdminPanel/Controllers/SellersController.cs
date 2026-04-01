@@ -1,5 +1,6 @@
 ﻿using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
+using AdminPanel.ViewModels.Common;
 using AdminPanel.ViewModels.Seller;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -90,6 +91,23 @@ namespace AdminPanel.Controllers
                 ["sellerStatus"] = sellerStatus,
                 ["search"] = search
             });
+
+            vm.RejectModal = new ModalViewModel
+            {
+
+                Title = "Reject Seller Application",
+                Description = "Seller will be notified with reason.",
+                SubmitText = "Reject Application",
+
+                // Action will be updated dynamically via JS
+                ActionUrl = "",
+
+                BodyHtml = @"
+                <div class='form-group'>
+                    <label>Reason *</label>
+                    <textarea name='reason' class='form-input' required></textarea>
+                </div>"
+            };
 
             return View(vm);
         }

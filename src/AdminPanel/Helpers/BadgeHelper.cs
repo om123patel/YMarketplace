@@ -90,5 +90,38 @@ namespace AdminPanel.Helpers
             "GBP" => "£",
             _ => code
         };
+
+        public static string OrderStatus(string status) => status switch
+        {
+            "Pending" => "badge b-pending",
+            "Confirmed" => "badge badge-sky",
+            "Shipped" => "badge badge-indigo",
+            "Delivered" => "badge b-active",
+            "Cancelled" => "badge b-archived",
+            _ => "badge badge-gray"
+        };
+
+        public static string OrderStatusLabel(string status) => status;
+
+        // ── Payment status ───────────────────────────────────────────
+        public static string PaymentStatus(string status) => status switch
+        {
+            "Paid" => "badge b-active",
+            "Pending" => "badge b-pending",
+            "Failed" => "badge b-rejected",
+            "Refunded" => "badge badge-sky",
+            "PartiallyRefunded" => "badge badge-amber",
+            _ => "badge badge-gray"
+        };
+
+        // ── Dispute status ───────────────────────────────────────────
+        public static string DisputeStatus(string status) => status switch
+        {
+            "Open" => "badge b-pending",
+            "UnderReview" => "badge badge-indigo",
+            "Resolved" => "badge b-active",
+            "Escalated" => "badge b-rejected",
+            _ => "badge badge-gray"
+        };
     }
 }

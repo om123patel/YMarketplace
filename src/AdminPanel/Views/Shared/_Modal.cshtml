@@ -1,0 +1,32 @@
+﻿@model ModalViewModel
+
+<div class="modal-backdrop js-modal" style="display:none">
+    <div class="modal-card">
+
+        <div class="modal-title js-modal-title">
+            @Model?.Title
+        </div>
+
+        <p class="modal-desc js-modal-desc">
+            @Model?.Description
+        </p>
+
+        <form class="js-modal-form" method="post" action="@Model?.ActionUrl">
+            @Html.AntiForgeryToken()
+
+            <div class="js-modal-body">
+                @Html.Raw(Model?.BodyHtml)
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline js-modal-close">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-danger js-modal-submit-text">
+                    @Model?.SubmitText
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>

@@ -1,0 +1,571 @@
+﻿@using AdminPanel.ViewModels.Orders
+@using AdminPanel.Helpers
+@model OrderDetailViewModel
+@{
+    ViewData["Title"] = Model.OrderNumber;
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Orders</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>@Model.OrderNumber</span>
+        </div>
+        <h1 class="pg-title">@Model.OrderNumber</h1>
+        <p class="pg-sub">
+            Placed @Model.CreatedAt.ToString("dd MMM yyyy, HH:mm") UTC ·
+            <span class="@BadgeHelper.OrderStatus(Model.Status)">@Model.Status</span>
+        </p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">← Back</a>
+
+        @if (Model.CanCancel)
+        {
+            <button type="button" class="btn btn-outline btn-sm"
+                    onclick="document.getElementById('cancelPanel').style.display='block'">
+                Cancel Order
+            </button>
+        }
+
+        @if (Model.CanRefund)
+        {
+            <form asp-action="ForceRefund" asp-route-id="@Model.Id" method="post"
+                  style="display:inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline btn-sm"
+                        onclick="return confirm('Force a full refund for this order?')">
+                    Force Refund
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+<partial name="_AlertBanner" />
+
+
+@if (Model.CanCancel)
+{
+    <div id="cancelPanel" style="display:none">
+        <div class="card" style="border-color:#fecdd3">
+            <div class="card-head" style="background:#fff8f8;border-color:#fecdd3">
+                <div class="card-title" style="color:var(--c-rose)">Cancel Order</div>
+            </div>
+            <div class="card-body">
+                <form asp-action="Cancel" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="form-group" style="margin-bottom:16px">
+                        <label class="form-label">Reason <span>*</span></label>
+                        <textarea name="reason" class="form-textarea" rows="2"
+                                  placeholder="Why is this order being cancelled…"
+                                  required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                onclick="document.getElementById('cancelPanel').style.display='none'">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            Confirm Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="detail-grid">
+
+    
+    <div class="detail-main">
+
+        <!-- Order items -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">
+                    Items
+                    <span class="card-sub">@Model.Items.Count item@(Model.Items.Count == 1 ? "" : "s")</span>
+                </div>
+            </div>
+            <div class="tbl-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="width:80px;text-align:center">Qty</th>
+                            <th style="width:110px;text-align:right">Unit Price</th>
+                            <th style="width:110px;text-align:right">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="prod-cell">
+                                        @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                                        {
+                                            <div class="prod-img">
+                                                <img src="@item.ProductImageUrl"
+                                                     alt="@item.ProductName" />
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="prod-img">
+                                                <svg width="16" height="16" fill="none"
+                                                     viewBox="0 0 24 24" stroke="var(--c-ink-4)"
+                                                     stroke-width="1.5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                                </svg>
+                                            </div>
+                                        }
+                                        <div>
+                                            <div class="prod-name">@item.ProductName</div>
+                                            @if (!string.IsNullOrEmpty(item.VariantName))
+                                            {
+                                                <div class="prod-sku">@item.VariantName</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align:center">@item.Quantity</td>
+                                <td style="text-align:right" class="tbl-mono">
+                                    ₹@item.UnitPrice.ToString("N2")
+                                </td>
+                                <td style="text-align:right" class="price">
+                                    ₹@item.LineTotal.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body" style="border-top:1px solid var(--c-border)">
+                <div style="display:flex;flex-direction:column;gap:6px;max-width:260px;
+                            margin-left:auto">
+                    <div style="display:flex;justify-content:space-between;
+                                font-size:13px;color:var(--c-ink-3)">
+                        <span>Subtotal</span>
+                        <span class="tbl-mono">₹@Model.SubTotal.ToString("N2")</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                font-size:13px;color:var(--c-ink-3)">
+                        <span>Shipping</span>
+                        <span class="tbl-mono">₹@Model.ShippingAmount.ToString("N2")</span>
+                    </div>
+                    @if (Model.DiscountAmount > 0)
+                    {
+                        <div style="display:flex;justify-content:space-between;
+                                    font-size:13px;color:var(--c-emerald)">
+                            <span>Discount</span>
+                            <span class="tbl-mono">-₹@Model.DiscountAmount.ToString("N2")</span>
+                        </div>
+                    }
+                    <div style="display:flex;justify-content:space-between;
+                                font-size:15px;font-weight:700;color:var(--c-ink);
+                                padding-top:8px;border-top:1px solid var(--c-border);
+                                margin-top:2px">
+                        <span>Total</span>
+                        <span class="tbl-mono">₹@Model.TotalAmount.ToString("N2")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+        @if (!string.IsNullOrEmpty(Model.TrackingNumber) || Model.ShippedAt.HasValue)
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Fulfillment</div>
+                </div>
+                <div class="card-body">
+                    <div class="field-grid-2">
+                        @if (!string.IsNullOrEmpty(Model.ShippingCarrier))
+                        {
+                            <div>
+                                <label class="form-label">Carrier</label>
+                                <div style="font-size:13.5px;color:var(--c-ink);margin-top:4px">
+                                    @Model.ShippingCarrier
+                                </div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.TrackingNumber))
+                        {
+                            <div>
+                                <label class="form-label">Tracking Number</label>
+                                <div style="font-size:13.5px;margin-top:4px">
+                                    @if (!string.IsNullOrEmpty(Model.TrackingUrl))
+                                    {
+                                        <a href="@Model.TrackingUrl" target="_blank"
+                                           class="tbl-link tbl-mono">
+                                            @Model.TrackingNumber
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="tbl-mono">@Model.TrackingNumber</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        @if (Model.ShippedAt.HasValue)
+                        {
+                            <div>
+                                <label class="form-label">Shipped At</label>
+                                <div style="font-size:13.5px;color:var(--c-ink);margin-top:4px">
+                                    @Model.ShippedAt.Value.ToString("dd MMM yyyy, HH:mm") UTC
+                                </div>
+                            </div>
+                        }
+                        @if (Model.DeliveredAt.HasValue)
+                        {
+                            <div>
+                                <label class="form-label">Delivered At</label>
+                                <div style="font-size:13.5px;color:var(--c-emerald);
+                                            font-weight:600;margin-top:4px">
+                                    @Model.DeliveredAt.Value.ToString("dd MMM yyyy, HH:mm") UTC
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        
+        @if (!string.IsNullOrEmpty(Model.CancellationReason))
+        {
+            <div class="card" style="border-color:#fecdd3">
+                <div class="card-head" style="background:#fff8f8;border-color:#fecdd3">
+                    <div class="card-title" style="color:var(--c-rose)">Cancellation</div>
+                </div>
+                <div class="card-body">
+                    <p style="font-size:13.5px;color:var(--c-ink-2);line-height:1.6">
+                        @Model.CancellationReason
+                    </p>
+                    @if (Model.CancelledAt.HasValue)
+                    {
+                        <p style="font-size:12px;color:var(--c-ink-4);margin-top:8px">
+                            Cancelled on @Model.CancelledAt.Value.ToString("dd MMM yyyy, HH:mm") UTC
+                        </p>
+                    }
+                </div>
+            </div>
+        }
+
+        
+        @if (Model.Disputes.Any())
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">
+                        Disputes
+                        <span class="card-sub">@Model.Disputes.Count dispute@(Model.Disputes.Count == 1 ? "" : "s")</span>
+                    </div>
+                </div>
+                @foreach (var dispute in Model.Disputes)
+                {
+                    <div style="padding:20px 24px;border-bottom:1px solid var(--c-border)">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                            <span class="@BadgeHelper.DisputeStatus(dispute.Status)">
+                                @dispute.Status
+                            </span>
+                            <span style="font-size:12px;color:var(--c-ink-4)">
+                                Opened @dispute.CreatedAt.ToString("dd MMM yyyy")
+                            </span>
+                        </div>
+
+                        <div style="margin-bottom:12px">
+                            <label class="form-label">Buyer Reason</label>
+                            <p style="font-size:13.5px;color:var(--c-ink-2);
+                                      margin-top:4px;line-height:1.6">
+                                @dispute.Reason
+                            </p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(dispute.BuyerEvidence))
+                        {
+                            <div style="margin-bottom:12px">
+                                <label class="form-label">Evidence</label>
+                                <p style="font-size:13px;color:var(--c-ink-3);
+                                          margin-top:4px;line-height:1.6">
+                                    @dispute.BuyerEvidence
+                                </p>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(dispute.SellerResponse))
+                        {
+                            <div style="margin-bottom:12px;padding:12px;
+                                        background:var(--c-canvas);
+                                        border-radius:var(--r-md);
+                                        border:1px solid var(--c-border)">
+                                <label class="form-label">Seller Response</label>
+                                <p style="font-size:13px;color:var(--c-ink-2);
+                                          margin-top:4px;line-height:1.6">
+                                    @dispute.SellerResponse
+                                </p>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(dispute.Resolution))
+                        {
+                            <div style="padding:12px;background:var(--c-emerald-lt);
+                                        border-radius:var(--r-md);
+                                        border:1px solid #bbf7d0;margin-bottom:12px">
+                                <label class="form-label" style="color:var(--c-emerald)">
+                                    Resolution
+                                </label>
+                                <p style="font-size:13px;color:var(--c-emerald);
+                                          margin-top:4px;line-height:1.6">
+                                    @dispute.Resolution
+                                </p>
+                                @if (dispute.ResolvedAt.HasValue)
+                                {
+                                    <p style="font-size:11.5px;color:var(--c-emerald);
+                                              opacity:.7;margin-top:4px">
+                                        Resolved @dispute.ResolvedAt.Value.ToString("dd MMM yyyy")
+                                    </p>
+                                }
+                            </div>
+                        }
+
+                        
+                        @if (dispute.Status is "Open" or "UnderReview" or "Escalated")
+                        {
+                            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+                                <button type="button"
+                                        class="btn btn-primary btn-sm"
+                                        onclick="openResolvePanel('@dispute.Id', '@Model.Id')">
+                                    Resolve Dispute
+                                </button>
+                                @if (dispute.Status != "Escalated")
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline btn-sm"
+                                            onclick="openEscalatePanel('@dispute.Id', '@Model.Id')">
+                                        Escalate
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+
+    
+    <div class="detail-side">
+
+        
+        <div class="card">
+            <div class="card-head"><div class="card-title">Summary</div></div>
+            <div class="card-body">
+                <div class="detail-kv">
+                    <span class="detail-k">Order Status</span>
+                    <span class="detail-v">
+                        <span class="@BadgeHelper.OrderStatus(Model.Status)">
+                            @Model.Status
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Payment</span>
+                    <span class="detail-v">
+                        <span class="@BadgeHelper.PaymentStatus(Model.PaymentStatus)">
+                            @Model.PaymentStatus
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Total</span>
+                    <span class="detail-v tbl-mono" style="font-weight:700">
+                        ₹@Model.TotalAmount.ToString("N2")
+                    </span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Items</span>
+                    <span class="detail-v">@Model.Items.Count</span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Placed</span>
+                    <span class="detail-v tbl-date">
+                        @Model.CreatedAt.ToString("dd MMM yyyy")
+                    </span>
+                </div>
+                @if (Model.ShippedAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Shipped</span>
+                        <span class="detail-v tbl-date">
+                            @Model.ShippedAt.Value.ToString("dd MMM yyyy")
+                        </span>
+                    </div>
+                }
+                @if (Model.DeliveredAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Delivered</span>
+                        <span class="detail-v tbl-date" style="color:var(--c-emerald)">
+                            @Model.DeliveredAt.Value.ToString("dd MMM yyyy")
+                        </span>
+                    </div>
+                }
+                @if (Model.HasActiveDispute)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Dispute</span>
+                        <span class="detail-v">
+                            <span class="badge b-rejected">Active</span>
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        
+        @if (!string.IsNullOrEmpty(Model.ShippingAddressLine1))
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Delivery Address</div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ShippingName))
+                    {
+                        <div style="font-size:13.5px;font-weight:600;
+                                    color:var(--c-ink);margin-bottom:6px">
+                            @Model.ShippingName
+                        </div>
+                    }
+                    <address style="font-style:normal;font-size:13px;
+                                    color:var(--c-ink-2);line-height:1.7">
+                        @Model.ShippingAddressLine1 <br />
+                        @if (!string.IsNullOrEmpty(Model.ShippingAddressLine2))
+                        {
+                            @Model.ShippingAddressLine2 <br />
+                        }
+                        @Model.ShippingCity@(!string.IsNullOrEmpty(Model.ShippingState) ? $", {Model.ShippingState}" : "") @Model.ShippingPostalCode <br />
+                        @Model.ShippingCountry
+                    </address>
+                    @if (!string.IsNullOrEmpty(Model.ShippingPhone))
+                    {
+                        <div style="font-size:12.5px;color:var(--c-ink-4);margin-top:6px">
+                            📞 @Model.ShippingPhone
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        
+        @if (Model.CanCancel || Model.CanRefund)
+        {
+            <div class="card">
+                <div class="card-head"><div class="card-title">Actions</div></div>
+                <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+                    @if (Model.CanCancel)
+                    {
+                        <button type="button"
+                                class="btn btn-outline btn-sm"
+                                style="width:100%;justify-content:center"
+                                onclick="document.getElementById('cancelPanel').style.display='block';
+                                         document.getElementById('cancelPanel').scrollIntoView({behavior:'smooth'})">
+                            Cancel Order
+                        </button>
+                    }
+                    @if (Model.CanRefund)
+                    {
+                        <form asp-action="ForceRefund" asp-route-id="@Model.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit"
+                                    class="btn btn-outline btn-sm"
+                                    style="width:100%;justify-content:center"
+                                    onclick="return confirm('Process a full refund for this order?')">
+                                Force Refund
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+
+<div class="modal-backdrop" id="resolveModal" style="display:none"
+     onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-card">
+        <div class="modal-title">Resolve Dispute</div>
+        <p class="modal-desc">Provide your resolution. Both buyer and seller will see this.</p>
+        <form id="resolveForm" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="orderId" id="resolveOrderId" value="@Model.Id" />
+            <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Resolution <span>*</span></label>
+                <textarea name="resolution" class="form-textarea" rows="3"
+                          placeholder="Describe how this dispute is resolved…"
+                          required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline"
+                        onclick="document.getElementById('resolveModal').style.display='none'">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">Resolve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<div class="modal-backdrop" id="escalateModal" style="display:none"
+     onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-card">
+        <div class="modal-title">Escalate Dispute</div>
+        <p class="modal-desc">Add a note and mark this dispute as escalated for further review.</p>
+        <form id="escalateForm" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="orderId" id="escalateOrderId" value="@Model.Id" />
+            <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">Note <span>*</span></label>
+                <textarea name="note" class="form-textarea" rows="2"
+                          placeholder="Why is this being escalated…"
+                          required></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-outline"
+                        onclick="document.getElementById('escalateModal').style.display='none'">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-danger">Escalate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openResolvePanel(disputeId, orderId) {
+            document.getElementById('resolveForm').action =
+                '/orders/disputes/' + disputeId + '/resolve';
+            document.getElementById('resolveOrderId').value = orderId;
+            document.getElementById('resolveModal').style.display = 'flex';
+        }
+        function openEscalatePanel(disputeId, orderId) {
+            document.getElementById('escalateForm').action =
+                '/orders/disputes/' + disputeId + '/escalate';
+            document.getElementById('escalateOrderId').value = orderId;
+            document.getElementById('escalateModal').style.display = 'flex';
+        }
+    </script>
+}

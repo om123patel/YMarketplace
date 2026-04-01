@@ -9,5 +9,7 @@ namespace AdminPanel.ViewModels.Seller
 
         public static readonly string[] StatusOptions =
             ["PendingApproval", "Active", "Rejected", "Suspended"];
+
+        public ModalViewModel RejectModal { get; set; }
     }
 }

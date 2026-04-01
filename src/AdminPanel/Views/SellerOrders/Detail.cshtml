@@ -1,0 +1,397 @@
+﻿@using AdminPanel.ViewModels.Orders
+@using AdminPanel.Helpers
+@model OrderDetailViewModel
+@{
+    ViewData["Title"] = Model.OrderNumber;
+    var canConfirm  = Model.Status == "Pending";
+    var canShip     = Model.Status == "Confirmed";
+    var canDeliver  = Model.Status == "Shipped";
+}
+
+<div class="pg-bar">
+    <div>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">My Orders</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>@Model.OrderNumber</span>
+        </div>
+        <h1 class="pg-title">@Model.OrderNumber</h1>
+        <p class="pg-sub">
+            Placed @Model.CreatedAt.ToString("dd MMM yyyy, HH:mm") UTC ·
+            <span class="@BadgeHelper.OrderStatus(Model.Status)">@Model.Status</span>
+        </p>
+    </div>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">← Back</a>
+
+        @if (canConfirm)
+        {
+            <form asp-action="Confirm" asp-route-id="@Model.Id"
+                  method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary btn-sm">
+                    ✓ Confirm Order
+                </button>
+            </form>
+        }
+
+        @if (canShip)
+        {
+            <button type="button" class="btn btn-primary btn-sm"
+                    onclick="document.getElementById('shipPanel').style.display='block'">
+                Mark as Shipped
+            </button>
+        }
+
+        @if (canDeliver)
+        {
+            <form asp-action="MarkDelivered" asp-route-id="@Model.Id"
+                  method="post" style="display:inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary btn-sm"
+                        onclick="return confirm('Mark this order as delivered?')">
+                    Mark Delivered
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+<partial name="_AlertBanner" />
+
+@* ── Ship inline form ──────────────────────────────────── *@
+@if (canShip)
+{
+    <div id="shipPanel" style="display:none">
+        <div class="card" style="border-color:#c7d2fe">
+            <div class="card-head" style="background:var(--c-indigo-lt);border-color:#c7d2fe">
+                <div class="card-title" style="color:var(--c-indigo)">Shipping Details</div>
+            </div>
+            <div class="card-body">
+                <form asp-action="Ship" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="field-grid-2" style="margin-bottom:16px">
+                        <div class="form-group">
+                            <label class="form-label">Carrier <span>*</span></label>
+                            <input name="carrier" class="form-input"
+                                   placeholder="e.g. BlueDart, DTDC" required />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tracking Number <span>*</span></label>
+                            <input name="trackingNumber" class="form-input"
+                                   placeholder="e.g. BLU123456789" required />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tracking URL</label>
+                            <input name="trackingUrl" class="form-input"
+                                   type="url" placeholder="https://track.carrier.com/…" />
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                onclick="document.getElementById('shipPanel').style.display='none'">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            Confirm Shipment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="detail-grid">
+
+    <div class="detail-main">
+
+        <!-- Items table — same as admin detail -->
+        <div class="card">
+            <div class="card-head">
+                <div class="card-title">
+                    Items
+                    <span class="card-sub">
+                        @Model.Items.Count item@(Model.Items.Count == 1 ? "" : "s")
+                    </span>
+                </div>
+            </div>
+            <div class="tbl-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="width:80px;text-align:center">Qty</th>
+                            <th style="width:110px;text-align:right">Unit Price</th>
+                            <th style="width:110px;text-align:right">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="prod-cell">
+                                        @if (!string.IsNullOrEmpty(item.ProductImageUrl))
+                                        {
+                                            <div class="prod-img">
+                                                <img src="@item.ProductImageUrl"
+                                                     alt="@item.ProductName" />
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="prod-img">
+                                                <svg width="16" height="16" fill="none"
+                                                     viewBox="0 0 24 24"
+                                                     stroke="var(--c-ink-4)" stroke-width="1.5">
+                                                    <path stroke-linecap="round"
+                                                          stroke-linejoin="round"
+                                                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                                </svg>
+                                            </div>
+                                        }
+                                        <div>
+                                            <div class="prod-name">@item.ProductName</div>
+                                            @if (!string.IsNullOrEmpty(item.VariantName))
+                                            {
+                                                <div class="prod-sku">@item.VariantName</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="text-align:center">@item.Quantity</td>
+                                <td style="text-align:right" class="tbl-mono">
+                                    ₹@item.UnitPrice.ToString("N2")
+                                </td>
+                                <td style="text-align:right" class="price">
+                                    ₹@item.LineTotal.ToString("N2")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body" style="border-top:1px solid var(--c-border)">
+                <div style="display:flex;flex-direction:column;gap:6px;
+                            max-width:260px;margin-left:auto">
+                    <div style="display:flex;justify-content:space-between;
+                                font-size:13px;color:var(--c-ink-3)">
+                        <span>Subtotal</span>
+                        <span class="tbl-mono">₹@Model.SubTotal.ToString("N2")</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                font-size:13px;color:var(--c-ink-3)">
+                        <span>Shipping</span>
+                        <span class="tbl-mono">₹@Model.ShippingAmount.ToString("N2")</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                font-size:15px;font-weight:700;color:var(--c-ink);
+                                padding-top:8px;border-top:1px solid var(--c-border)">
+                        <span>Total</span>
+                        <span class="tbl-mono">₹@Model.TotalAmount.ToString("N2")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Disputes (seller can see, respond only) -->
+        @if (Model.Disputes.Any())
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Disputes</div>
+                </div>
+                @foreach (var dispute in Model.Disputes)
+                {
+                    <div style="padding:20px 24px;border-bottom:1px solid var(--c-border)">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                            <span class="@BadgeHelper.DisputeStatus(dispute.Status)">
+                                @dispute.Status
+                            </span>
+                            <span style="font-size:12px;color:var(--c-ink-4)">
+                                Opened @dispute.CreatedAt.ToString("dd MMM yyyy")
+                            </span>
+                        </div>
+                        <label class="form-label">Buyer Reason</label>
+                        <p style="font-size:13.5px;color:var(--c-ink-2);
+                                  margin-top:4px;margin-bottom:12px;line-height:1.6">
+                            @dispute.Reason
+                        </p>
+
+                        @if (!string.IsNullOrEmpty(dispute.SellerResponse))
+                        {
+                            <div style="padding:10px 12px;background:var(--c-canvas);
+                                        border-radius:var(--r-md);
+                                        border:1px solid var(--c-border)">
+                                <label class="form-label">Your Response</label>
+                                <p style="font-size:13px;color:var(--c-ink-2);
+                                          margin-top:4px;line-height:1.6">
+                                    @dispute.SellerResponse
+                                </p>
+                            </div>
+                        }
+                        else if (dispute.Status == "Open")
+                        {
+                            <form asp-controller="SellerOrders"
+                                  asp-action="RespondToDispute"
+                                  asp-route-id="@dispute.Id"
+                                  method="post" style="margin-top:12px">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="orderId" value="@Model.Id" />
+                                <div class="form-group" style="margin-bottom:10px">
+                                    <label class="form-label">Your Response <span>*</span></label>
+                                    <textarea name="response" class="form-textarea" rows="3"
+                                              placeholder="Respond to the buyer's dispute…"
+                                              required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    Submit Response
+                                </button>
+                            </form>
+                        }
+
+                        @if (!string.IsNullOrEmpty(dispute.Resolution))
+                        {
+                            <div style="padding:10px 12px;background:var(--c-emerald-lt);
+                                        border-radius:var(--r-md);
+                                        border:1px solid #bbf7d0;margin-top:12px">
+                                <label class="form-label" style="color:var(--c-emerald)">
+                                    Admin Resolution
+                                </label>
+                                <p style="font-size:13px;color:var(--c-emerald);
+                                          margin-top:4px;line-height:1.6">
+                                    @dispute.Resolution
+                                </p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+
+    <div class="detail-side">
+
+        <div class="card">
+            <div class="card-head"><div class="card-title">Order Summary</div></div>
+            <div class="card-body">
+                <div class="detail-kv">
+                    <span class="detail-k">Status</span>
+                    <span class="detail-v">
+                        <span class="@BadgeHelper.OrderStatus(Model.Status)">
+                            @Model.Status
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Payment</span>
+                    <span class="detail-v">
+                        <span class="@BadgeHelper.PaymentStatus(Model.PaymentStatus)">
+                            @Model.PaymentStatus
+                        </span>
+                    </span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Total</span>
+                    <span class="detail-v tbl-mono" style="font-weight:700">
+                        ₹@Model.TotalAmount.ToString("N2")
+                    </span>
+                </div>
+                <div class="detail-kv">
+                    <span class="detail-k">Placed</span>
+                    <span class="detail-v tbl-date">
+                        @Model.CreatedAt.ToString("dd MMM yyyy")
+                    </span>
+                </div>
+                @if (Model.ShippedAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Shipped</span>
+                        <span class="detail-v tbl-date">
+                            @Model.ShippedAt.Value.ToString("dd MMM yyyy")
+                        </span>
+                    </div>
+                }
+                @if (Model.DeliveredAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Delivered</span>
+                        <span class="detail-v tbl-date" style="color:var(--c-emerald)">
+                            @Model.DeliveredAt.Value.ToString("dd MMM yyyy")
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ShippingAddressLine1))
+        {
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">Delivery Address</div>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ShippingName))
+                    {
+                        <div style="font-size:13.5px;font-weight:600;
+                                    color:var(--c-ink);margin-bottom:6px">
+                            @Model.ShippingName
+                        </div>
+                    }
+                    <address style="font-style:normal;font-size:13px;
+                                    color:var(--c-ink-2);line-height:1.7">
+                        @Model.ShippingAddressLine1 <br />
+                        @if (!string.IsNullOrEmpty(Model.ShippingAddressLine2))
+                        {
+                            @Model.ShippingAddressLine2 <br />
+                        }
+                        @Model.ShippingCity@(!string.IsNullOrEmpty(Model.ShippingState) ? $", {Model.ShippingState}" : "") @Model.ShippingPostalCode <br />
+                        @Model.ShippingCountry
+                    </address>
+                </div>
+            </div>
+        }
+
+        @if (canConfirm || canShip || canDeliver)
+        {
+            <div class="card">
+                <div class="card-head"><div class="card-title">Actions</div></div>
+                <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+                    @if (canConfirm)
+                    {
+                        <form asp-action="Confirm" asp-route-id="@Model.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary btn-sm"
+                                    style="width:100%;justify-content:center">
+                                ✓ Confirm Order
+                            </button>
+                        </form>
+                    }
+                    @if (canShip)
+                    {
+                        <button type="button" class="btn btn-primary btn-sm"
+                                style="width:100%;justify-content:center"
+                                onclick="document.getElementById('shipPanel').style.display='block';
+                                         document.getElementById('shipPanel').scrollIntoView({behavior:'smooth'})">
+                            Mark as Shipped
+                        </button>
+                    }
+                    @if (canDeliver)
+                    {
+                        <form asp-action="MarkDelivered" asp-route-id="@Model.Id" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-primary btn-sm"
+                                    style="width:100%;justify-content:center"
+                                    onclick="return confirm('Mark this order as delivered?')">
+                                Mark Delivered
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
