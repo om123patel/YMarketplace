@@ -123,5 +123,25 @@ namespace AdminPanel.Helpers
             "Escalated" => "badge b-rejected",
             _ => "badge badge-gray"
         };
+
+        public static BadgeInfo Transaction(string status) => status switch
+        {
+            "Pending" => new("bg-warning-subtle text-warning-emphasis border border-warning-subtle", "Pending"),
+            "Completed" => new("bg-success-subtle text-success-emphasis border border-success-subtle", "Completed"),
+            "Failed" => new("bg-danger-subtle text-danger-emphasis border border-danger-subtle", "Failed"),
+            "Refunded" => new("bg-info-subtle text-info-emphasis border border-info-subtle", "Refunded"),
+            "PartiallyRefunded" => new("bg-info-subtle text-info-emphasis border border-info-subtle", "Partially Refunded"),
+            _ => new("bg-secondary-subtle text-secondary-emphasis border", status)
+        };
+
+        public static BadgeInfo Payout(string status) => status switch
+        {
+            "Pending" => new("bg-warning-subtle text-warning-emphasis border border-warning-subtle", "Pending"),
+            "Processing" => new("bg-info-subtle text-info-emphasis border border-info-subtle", "Processing"),
+            "Completed" => new("bg-success-subtle text-success-emphasis border border-success-subtle", "Completed"),
+            "Failed" => new("bg-danger-subtle text-danger-emphasis border border-danger-subtle", "Failed"),
+            "Cancelled" => new("bg-secondary-subtle text-secondary-emphasis border", "Cancelled"),
+            _ => new("bg-secondary-subtle text-secondary-emphasis border", status)
+        };
     }
 }

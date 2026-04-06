@@ -1,0 +1,145 @@
+﻿@using AdminPanel.Helpers
+@using AdminPanel.ViewModels.Common
+@using AdminPanel.ViewModels.Payments
+@model PayoutIndexViewModel
+@{
+    ViewData["Title"] = "Payouts";
+    TableColumnModel Col(string label, string column, string? width = null) => new()
+    {
+        Label = label,
+        Sortable = true,
+        Column = column,
+        SortBy = Model.SortBy,
+        SortDirection = Model.SortDirection,
+        Request = Context.Request,
+        Width = width
+    };
+
+    TableColumnModel Plain(string label, string? width = null, string align = "left") => new()
+    {
+        Label = label,
+        Sortable = false,
+        Width = width,
+        Align = align
+    };
+
+}
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Payouts</h1>
+        <p class="text-muted mb-0">Seller payout requests and history</p>
+    </div>
+</div>
+
+<partial name="_AlertBanner" />
+
+<!-- Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    @foreach (var opt in Model.StatusOptions)
+                    {
+                       // <option value="@opt.Value" selected="@(opt.Selected ? "selected" : null)">@opt.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Search Seller</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="Seller name…" value="@Model.Search" />
+            </div>
+            <div class="col-auto d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                    Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body p-0">
+        @if (!Model.Items.Any())
+        {
+            @await Html.PartialAsync("_EmptyState", new EmptyStateModel
+            {
+                Title = "No payouts found",
+                Message = "No payout requests match your filters."
+            })
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            @await Html.PartialAsync("_TableColumn", Col("Seller", "Seller"))
+                            @await Html.PartialAsync("_TableColumn", Col("Amount", "Amount"))
+                            @await Html.PartialAsync("_TableColumn", Plain("Payment Method"))
+                            @await Html.PartialAsync("_TableColumn", Plain("Status", "110px"))
+                            @await Html.PartialAsync("_TableColumn", Plain("Requested", "110px"))
+                            @await Html.PartialAsync("_TableColumn", Plain("Completed", "110px"))
+                            @await Html.PartialAsync("_TableColumn", Plain("Actions", "100px", "center"))
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <a href="/sellers/@item.SellerId"
+                                       class="fw-semibold text-decoration-none">
+                                        @(item.SellerName ?? item.SellerId.ToString()[..8] + "…")
+                                    </a>
+                                </td>
+                                <td class="fw-bold">₹@item.Amount.ToString("N2")</td>
+                                <td class="small text-muted">
+                                    @(item.PaymentMethod ?? "—")
+                                </td>
+                                <td>
+                                    @{
+                                        var pBadge = BadgeHelper.Payout(item.Status);
+                                    }
+                                    <span class="badge @pBadge.CssClass">
+                                        @pBadge.Label
+                                    </span>
+                                </td>
+                                <td class="small text-muted">
+                                    @item.CreatedAt.ToString("dd MMM yyyy")
+                                </td>
+                                <td class="small text-muted">
+                                    @(item.CompletedAt?.ToString("dd MMM yyyy") ?? "—")
+                                </td>
+                                <td class="text-end">
+                                    <a href="@Url.Action("Detail", new { id = item.Id })"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @await Html.PartialAsync("_Pagination", new PaginationViewModel
+            {
+                Page = Model.Page,
+                PageSize = Model.PageSize,
+                TotalCount = Model.TotalCount,
+                RouteData = Model.RouteData,
+                Action = "Index",
+                Controller = "Payouts"
+            })
+        }
+    </div>
+</div>

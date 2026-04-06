@@ -94,14 +94,21 @@
             <table>
                 <thead>
                     <tr>
-                        <partial name="_TableColumn" model="@Col("Order", "ordernumber")" />
-                        <partial name="_TableColumn" model="@Plain("Status", "130px")" />
-                        <partial name="_TableColumn" model="@Plain("Payment", "140px")" />
-                        <partial name="_TableColumn" model="@Plain("Items", "70px", "center")" />
-                        <partial name="_TableColumn" model="@Col("Total", "total", "110px")" />
-                        <partial name="_TableColumn" model="@Plain("Tracking", "140px")" />
-                        <partial name="_TableColumn" model="@Col("Placed", "createdat", "120px")" />
-                        <partial name="_TableColumn" model="@Plain("", "60px", "center")" />
+                        <table-column label="Order" column="ordernumber" sort-by="@Model.SortBy" sort-direction="@Model.SortDirection" />
+
+                        <table-column label="Status" sortable="false" width="130px" />
+
+                        <table-column label="Payment" sortable="false" width="140px" />
+
+                        <table-column label="Items" sortable="false" width="70px" align="center" />
+
+                        <table-column label="Total" column="total" width="110px" sort-by="@Model.SortBy" sort-direction="@Model.SortDirection" />
+
+                        <table-column label="Tracking" sortable="false" width="140px" />
+
+                        <table-column label="Placed" column="createdat" width="120px" sort-by="@Model.SortBy" sort-direction="@Model.SortDirection" />
+
+                        <table-column label="" sortable="false" width="60px" align="center" />
                     </tr>
                 </thead>
                 <tbody>

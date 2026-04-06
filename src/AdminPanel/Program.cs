@@ -10,6 +10,12 @@ namespace AdminPanel
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Host.UseDefaultServiceProvider(options => {
+                options.ValidateScopes = true;   // catch captive dependencies
+                options.ValidateOnBuild = true;   // catch missing registrations
+            });
+
+
             // ── Serilog ────────────────────────────────────────────────
             builder.Host.UseSerilog((ctx, config) =>
                 config
@@ -91,11 +97,13 @@ namespace AdminPanel
             services.AddHttpClient<IUserApiClient, UserApiClient>(ConfigureClient);
             services.AddHttpClient<IOrderApiClient, OrderApiClient>(ConfigureClient);
             services.AddHttpClient<ISellerOrderApiClient, SellerOrderApiClient>(ConfigureClient);
-
-            // ──────────────────────────────────────────────────────────
-            // BUILD APP
-            // ──────────────────────────────────────────────────────────
-            var app = builder.Build();
+            services.AddHttpClient<ITransactionApiClient, TransactionApiClient>(ConfigureClient);
+            services.AddHttpClient<IPayoutApiClient, PayoutApiClient>(ConfigureClient);
+            services.AddHttpClient<ICommissionRuleApiClient, CommissionRuleApiClient>(ConfigureClient);
+                        // ──────────────────────────────────────────────────────────
+                        // BUILD APP
+                        // ──────────────────────────────────────────────────────────
+                        var app = builder.Build();
 
             if (!app.Environment.IsDevelopment())
             {

@@ -4,7 +4,6 @@
 @{
     ViewData["Title"] = "My Orders";
 }
-
 <div class="pg-bar">
     <div>
         <h1 class="pg-title">My Orders</h1>
@@ -17,24 +16,42 @@
 <div class="card">
 
     <form method="get" class="filter-bar">
-        <div class="tab-group">
-            @foreach (var (label, val) in new[]
-                        {
-                        ("All",       ""),
-                        ("Pending",   "Pending"),
-                        ("Confirmed", "Confirmed"),
-                        ("Shipped",   "Shipped"),
-                        ("Delivered", "Delivered"),
-                        ("Cancelled", "Cancelled")
-                        })
-            {
-                var active = (Model.Status ?? "") == val;
-                <a href="@Url.Action("Index", new { status = string.IsNullOrEmpty(val) ? null : val })"
-                   class="tab @(active ? "on" : "")">
-                    @label
-                </a>
-            }
+        <input type="hidden" name="sortBy" value="@Model.SortBy" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+
+        <div class="filter-search">
+            <svg class="filter-search-ico" width="14" height="14" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input name="search" value="@Model.Search"
+                   placeholder="Search order number…" class="filter-input" />
         </div>
+
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            @foreach (var s in new[] { "Pending", "Confirmed", "Shipped", "Delivered", "Cancelled" })
+            {
+                <option value="@s" selected="@(Model.Status == s)">@s</option>
+            }
+        </select>
+
+        <select name="paymentStatus" class="filter-select">
+            <option value="">All Payments</option>
+            @foreach (var p in new[] { "Pending", "Paid", "Failed", "Refunded", "PartiallyRefunded" })
+            {
+                <option value="@p" selected="@(Model.PaymentStatus == p)">@p</option>
+            }
+        </select>
+
+        <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+        @if (!string.IsNullOrEmpty(Model.Search)
+                || !string.IsNullOrEmpty(Model.Status)
+                || !string.IsNullOrEmpty(Model.PaymentStatus))
+        {
+            <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
+        }
     </form>
 
     @if (!Model.Items.Any())
@@ -61,13 +78,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Order</th>
-                        <th>Status</th>
-                        <th>Items</th>
-                        <th>Total</th>
-                        <th>Tracking</th>
-                        <th>Placed</th>
-                        <th style="width:90px;text-align:center">Actions</th>
+                        <table-column label="Order" column="ordernumber" sort-by="@Model.SortBy" sort-direction="@Model.SortDirection" />
+                        <table-column label="Status" sortable="false" width="130px" />
+                        <table-column label="Items" sortable="false" width="70px" align="center" />
+                        <table-column label="Total" column="total" sort-by="@Model.SortBy" sort-direction="@Model.SortDirection" width="110px" />
+                        <table-column label="Tracking" sortable="false" width="140px" />
+                        <table-column label="Placed" column="createdat" sort-by="@Model.SortBy" sort-direction="@Model.SortDirection" width="120px" />
+                        <table-column sortable="false" width="60px" align="center" />
                     </tr>
                 </thead>
                 <tbody>
@@ -113,8 +130,8 @@
                                               d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                               d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268
-                                                         2.943 9.542 7-1.274 4.057-5.064 7-9.542
-                                                         7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                 2.943 9.542 7-1.274 4.057-5.064 7-9.542
+                                                                 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </a>
                             </td>

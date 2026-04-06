@@ -1,0 +1,159 @@
+﻿@using AdminPanel.ViewModels.Payments
+@model TransactionIndexViewModel
+@{
+    ViewData["Title"] = "Transactions";
+    Layout = "_AdminLayout";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0">Transactions</h1>
+        <p class="text-muted mb-0">All payment transactions across the platform</p>
+    </div>
+</div>
+
+@await Html.PartialAsync("_AlertBanner")
+
+<!-- Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    @foreach (var opt in Model.StatusOptions)
+                    {
+                       // var sel = opt.Selected ? "selected" : "";
+                       // <option value="@opt.Value" @sel>@opt.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Method</label>
+                <select name="method" class="form-select form-select-sm">
+                    <option value="">All Methods</option>
+                    @foreach (var opt in Model.MethodOptions)
+                    {
+                      @*   var sel = opt.Selected ? "selected" : "";
+                        <option value="@opt.Value" @sel>@opt.Label</option> *@
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">From</label>
+                <input type="date" name="dateFrom" class="form-control form-control-sm"
+                       value="@Model.DateFromFilter" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">To</label>
+                <input type="date" name="dateTo" class="form-control form-control-sm"
+                       value="@Model.DateToFilter" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Search</label>
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="Gateway ID…" value="@Model.Search" />
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-search"></i>
+                </button>
+                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-x"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body p-0">
+        @if (!Model.Items.Any())
+        {
+            @await Html.PartialAsync("_EmptyState", new EmptyStateModel
+            {
+                Title   = "No transactions found",
+                Message = "Try adjusting your filters."
+            })
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order</th>
+                            <th>Amount</th>
+                            <th>Commission</th>
+                            <th>Seller Net</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th>Gateway Ref</th>
+                            <th>Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <a href="/orders/@item.OrderId"
+                                       class="text-decoration-none font-monospace small">
+                                        @item.OrderId.ToString()[..8]…
+                                    </a>
+                                </td>
+                                <td class="fw-semibold">
+                                    ₹@item.Amount.ToString("N2")
+                                </td>
+                                <td class="text-muted small">
+                                    ₹@item.CommissionAmount.ToString("N2")
+                                </td>
+                                <td class="text-success small fw-semibold">
+                                    ₹@item.SellerAmount.ToString("N2")
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        @item.Method
+                                    </span>
+                                </td>
+                                <td>
+                                    @{
+                                        var txBadge = BadgeHelper.Transaction(item.Status);
+                                    }
+                                    <span class="badge @txBadge.CssClass">
+                                        @txBadge.Label
+                                    </span>
+                                </td>
+                                <td class="font-monospace small text-muted">
+                                    @(item.GatewayTransactionId ?? "—")
+                                </td>
+                                <td class="small text-muted">
+                                    @item.CreatedAt.ToString("dd MMM yyyy")
+                                </td>
+                                <td class="text-end">
+                                    <a href="@Url.Action("Detail", new { id = item.Id })"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @await Html.PartialAsync("_Pagination", new PaginationViewModel
+            {
+                Page = Model.Page,
+                PageSize = Model.PageSize,
+                TotalCount = Model.TotalCount,
+                RouteData = Model.RouteData,
+                Action = "Index",
+                Controller = "Transactions"
+            })
+        }
+    </div>
+</div>

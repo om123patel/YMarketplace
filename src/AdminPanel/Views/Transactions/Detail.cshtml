@@ -1,0 +1,201 @@
+﻿@using AdminPanel.ViewModels.Payments
+@model TransactionDetailViewModel
+@{
+    ViewData["Title"] = $"Transaction Detail";
+    Layout = "_AdminLayout";
+    var badge = BadgeHelper.Transaction(Model.Status);
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+    <div>
+        <h1 class="h4 mb-0">Transaction Detail</h1>
+        <p class="text-muted mb-0 font-monospace small">@Model.Id</p>
+    </div>
+    <span class="badge @badge.CssClass ms-auto fs-6">@badge.Label</span>
+</div>
+
+@await Html.PartialAsync("_AlertBanner")
+
+<div class="row g-4">
+
+    <!-- Main info -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Payment Details</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Order ID</label>
+                        <div>
+                            <a href="/orders/@Model.OrderId"
+                               class="font-monospace small">
+                                @Model.OrderId
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Buyer ID</label>
+                        <div class="font-monospace small">@Model.BuyerId</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Seller ID</label>
+                        <div class="font-monospace small">@Model.SellerId</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Payment Method</label>
+                        <div>
+                            <span class="badge bg-light text-dark border">
+                                @Model.Method
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Total Amount</label>
+                        <div class="fs-5 fw-bold">₹@Model.Amount.ToString("N2")</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Platform Commission</label>
+                        <div class="text-danger fw-semibold">
+                            − ₹@Model.CommissionAmount.ToString("N2")
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted">Seller Net</label>
+                        <div class="text-success fw-bold fs-5">
+                            ₹@Model.SellerAmount.ToString("N2")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gateway -->
+        <div class="card mb-4">
+            <div class="card-header fw-semibold">Gateway Information</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Provider</label>
+                        <div>@(Model.GatewayProvider ?? "—")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">
+                            Gateway Transaction ID
+                        </label>
+                        <div class="font-monospace small">
+                            @(Model.GatewayTransactionId ?? "—")
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted">Completed At</label>
+                        <div>@(Model.CompletedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</div>
+                    </div>
+                    @if (Model.FailedAt.HasValue)
+                    {
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Failed At</label>
+                            <div class="text-danger">
+                                @Model.FailedAt.Value.ToString("dd MMM yyyy HH:mm")
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Refund info (if applicable) -->
+        @if (Model.RefundedAmount > 0)
+        {
+            <div class="card mb-4 border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle">
+                    Refund Details
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">
+                                Refunded Amount
+                            </label>
+                            <div class="fw-bold text-warning-emphasis fs-5">
+                                ₹@Model.RefundedAmount.ToString("N2")
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Refunded At</label>
+                            <div>
+                                @(Model.RefundedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small text-muted">Reason</label>
+                            <div>@(Model.RefundReason ?? "—")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Sidebar actions -->
+    <div class="col-lg-4">
+
+        <!-- Refund action -->
+        @if (Model.CanRefund)
+        {
+            <div class="card mb-3 border-warning">
+                <div class="card-header fw-semibold text-warning-emphasis bg-warning-subtle">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Issue Refund
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">
+                        Remaining refundable:
+                        <strong>₹@Model.MaxRefundable.ToString("N2")</strong>
+                    </p>
+                    <form asp-action="Refund" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">
+                                Refund Amount (₹)
+                            </label>
+                            <input type="number" name="amount"
+                                   class="form-control form-control-sm"
+                                   step="0.01" min="0.01"
+                                   max="@Model.MaxRefundable"
+                                   value="@Model.MaxRefundable"
+                                   required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Reason</label>
+                            <textarea name="reason" class="form-control form-control-sm"
+                                  rows="2" required
+                                  placeholder="Reason for refund…"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning btn-sm w-100">
+                            Process Refund
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        <!-- Meta -->
+        <div class="card">
+            <div class="card-header fw-semibold">Meta</div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-5 text-muted">Created</dt>
+                    <dd class="col-7">
+                        @Model.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                    </dd>
+                    <dt class="col-5 text-muted">Updated</dt>
+                    <dd class="col-7">
+                        @Model.UpdatedAt.ToString("dd MMM yyyy HH:mm")
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

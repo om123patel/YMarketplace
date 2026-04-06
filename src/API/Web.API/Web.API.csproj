@@ -22,6 +22,7 @@
 	  <ProjectReference Include="..\..\Modules\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
 	  <ProjectReference Include="..\..\Modules\Orders\Orders.Application\Orders.Application.csproj" />
 	  <ProjectReference Include="..\..\Modules\Orders\Orders.Infrastructure\Orders.Infrastructure.csproj" />
+	  <ProjectReference Include="..\..\Modules\Payment\Payments.Application\Payments.Application.csproj" />
 	  <ProjectReference Include="..\..\shared\Shared.Infrastructure\Shared.Infrastructure.csproj" />
 	</ItemGroup>
 

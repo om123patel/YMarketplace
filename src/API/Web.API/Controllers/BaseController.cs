@@ -30,7 +30,17 @@ namespace Web.API.Controllers
                 "DISPUTE_NOT_FOUND" or
                 "CART_NOT_FOUND" or
                 "CART_ITEM_NOT_FOUND" or
-                "SELLER_NOT_FOUND"
+                "SELLER_NOT_FOUND" or 
+                "TRANSACTION_NOT_FOUND" or
+                "PAYOUT_NOT_FOUND" or
+                "COMMISSION_RULE_NOT_FOUND" or
+                "TRANSACTION_EXISTS" or
+                "PENDING_PAYOUT_EXISTS" or
+                "INSUFFICIENT_BALANCE" or
+                "INVALID_PAYOUT_STATUS_TRANSITION" or
+                "INVALID_STATUS_TRANSITION" or
+                "INVALID_PAYOUT_AMOUNT" or
+                "INVALID_REFUND_AMOUNT" 
                     => NotFound(ApiResponse<T>.Fail(
                         result.Error!, result.ErrorCode, 404)),
 

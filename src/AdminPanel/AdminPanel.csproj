@@ -14,4 +14,8 @@
 	<ItemGroup>
 	  <Folder Include="Dtos\Dashboard\" />
 	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\Modules\Payment\Payments.Application\Payments.Application.csproj" />
+	  <ProjectReference Include="..\shared\Shared.Application\Shared.Application.csproj" />
+	</ItemGroup>
 </Project>
