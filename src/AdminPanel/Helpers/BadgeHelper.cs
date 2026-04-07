@@ -14,6 +14,7 @@
 
 namespace AdminPanel.Helpers
 {
+    public record BadgeInfo(string CssClass, string Label);
     public static class BadgeHelper
     {
         // ── Product status ───────────────────────────────────────────────────

@@ -4,142 +4,119 @@
 @model PayoutIndexViewModel
 @{
     ViewData["Title"] = "Payouts";
-    TableColumnModel Col(string label, string column, string? width = null) => new()
-    {
-        Label = label,
-        Sortable = true,
-        Column = column,
-        SortBy = Model.SortBy,
-        SortDirection = Model.SortDirection,
-        Request = Context.Request,
-        Width = width
-    };
-
-    TableColumnModel Plain(string label, string? width = null, string align = "left") => new()
-    {
-        Label = label,
-        Sortable = false,
-        Width = width,
-        Align = align
-    };
-
 }
 
-<div class="page-header d-flex justify-content-between align-items-center mb-4">
+<div class="pg-bar">
     <div>
-        <h1 class="h3 mb-0">Payouts</h1>
-        <p class="text-muted mb-0">Seller payout requests and history</p>
+        <h1 class="pg-title">Payouts</h1>
+        <p class="pg-sub">Seller payout requests and history</p>
     </div>
 </div>
 
 <partial name="_AlertBanner" />
 
-<!-- Filter Bar -->
-<div class="card mb-3">
-    <div class="card-body py-3">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold">Status</label>
-                <select name="status" class="form-select form-select-sm">
-                    <option value="">All Statuses</option>
-                    @foreach (var opt in Model.StatusOptions)
-                    {
-                       // <option value="@opt.Value" selected="@(opt.Selected ? "selected" : null)">@opt.Label</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold">Search Seller</label>
-                <input type="text" name="search" class="form-control form-control-sm"
-                       placeholder="Seller name…" value="@Model.Search" />
-            </div>
-            <div class="col-auto d-flex gap-1">
-                <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-search"></i> Filter
-                </button>
-                <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                    Clear
-                </a>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Table -->
 <div class="card">
-    <div class="card-body p-0">
-        @if (!Model.Items.Any())
-        {
-            @await Html.PartialAsync("_EmptyState", new EmptyStateModel
-            {
-                Title = "No payouts found",
-                Message = "No payout requests match your filters."
-            })
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            @await Html.PartialAsync("_TableColumn", Col("Seller", "Seller"))
-                            @await Html.PartialAsync("_TableColumn", Col("Amount", "Amount"))
-                            @await Html.PartialAsync("_TableColumn", Plain("Payment Method"))
-                            @await Html.PartialAsync("_TableColumn", Plain("Status", "110px"))
-                            @await Html.PartialAsync("_TableColumn", Plain("Requested", "110px"))
-                            @await Html.PartialAsync("_TableColumn", Plain("Completed", "110px"))
-                            @await Html.PartialAsync("_TableColumn", Plain("Actions", "100px", "center"))
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.Items)
-                        {
-                            <tr>
-                                <td>
-                                    <a href="/sellers/@item.SellerId"
-                                       class="fw-semibold text-decoration-none">
-                                        @(item.SellerName ?? item.SellerId.ToString()[..8] + "…")
-                                    </a>
-                                </td>
-                                <td class="fw-bold">₹@item.Amount.ToString("N2")</td>
-                                <td class="small text-muted">
-                                    @(item.PaymentMethod ?? "—")
-                                </td>
-                                <td>
-                                    @{
-                                        var pBadge = BadgeHelper.Payout(item.Status);
-                                    }
-                                    <span class="badge @pBadge.CssClass">
-                                        @pBadge.Label
-                                    </span>
-                                </td>
-                                <td class="small text-muted">
-                                    @item.CreatedAt.ToString("dd MMM yyyy")
-                                </td>
-                                <td class="small text-muted">
-                                    @(item.CompletedAt?.ToString("dd MMM yyyy") ?? "—")
-                                </td>
-                                <td class="text-end">
-                                    <a href="@Url.Action("Detail", new { id = item.Id })"
-                                       class="btn btn-sm btn-outline-secondary">
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+    <form method="get" class="filter-bar">
 
-            @await Html.PartialAsync("_Pagination", new PaginationViewModel
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            @foreach (var opt in Model.StatusOptions)
             {
-                Page = Model.Page,
-                PageSize = Model.PageSize,
-                TotalCount = Model.TotalCount,
-                RouteData = Model.RouteData,
-                Action = "Index",
-                Controller = "Payouts"
-            })
+                <option value="@opt.Value"
+                        selected="@(Model.StatusFilter == opt.Value)">
+                    @opt.Label
+                </option>
+            }
+        </select>
+
+        <div class="filter-search">
+            <svg class="filter-search-ico" width="14" height="14" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input type="text" name="search" class="filter-input"
+                   placeholder="Seller name…" value="@Model.Search" />
+        </div>
+
+        <div class="f-right">
+            <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+            @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.StatusFilter))
+            {
+                <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
+            }
+        </div>
+    </form>
+
+    @if (!Model.Items.Any())
+    {
+        <partial name="_EmptyState" model="@(new EmptyStateModel
+                                    {
+                                        Title = "No payouts found",
+                                        Message = "No payout requests match your filters."
+                                    })" />
         }
-    </div>
+    else
+    {
+        <div class="tbl-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Seller</th>
+                        <th>Amount</th>
+                        <th>Payment Method</th>
+                        <th style="width:120px">Status</th>
+                        <th style="width:120px">Requested</th>
+                        <th style="width:120px">Completed</th>
+                        <th style="text-align:center;width:80px">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="prod-name">
+                                @(item.SellerName ?? item.SellerId.ToString()[..8] + "…")
+                            </td>
+                            <td class="price">₹@item.Amount.ToString("N2")</td>
+                            <td class="tbl-meta">@(item.PaymentMethod ?? "—")</td>
+                            <td>
+                                @{
+                                    var pBadge = BadgeHelper.Payout(item.Status);
+                                }
+                                <span class="badge @pBadge.CssClass">@pBadge.Label</span>
+                            </td>
+                            <td class="tbl-date">@item.CreatedAt.ToString("dd MMM yyyy")</td>
+                            <td class="tbl-date">
+                                @(item.CompletedAt?.ToString("dd MMM yyyy") ?? "—")
+                            </td>
+                            <td style="text-align:center">
+                                <a asp-action="Detail" asp-route-id="@item.Id"
+                                   class="row-btn" title="View">
+                                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"
+                                         stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943
+                                                         9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pagination" model="@(new PaginationViewModel
+                                    {
+                                        Page = Model.Page,
+                                        PageSize = Model.PageSize,
+                                        TotalCount = Model.TotalCount,
+                                        RouteData = Model.RouteData,
+                                        Action = "Index",
+                                        Controller = "Payouts"
+                                    })" />
+        }
 </div>

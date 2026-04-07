@@ -1,21 +1,27 @@
-﻿using Payments.Application.DTOs.Payouts;
-using Shared.Application.Models;
+﻿using AdminPanel.Dtos.Common;
+using AdminPanel.Dtos.Payments;
+using AdminPanel.Models;
 
 namespace AdminPanel.Services.Interfaces
 {
     public interface IPayoutApiClient
     {
-        Task<PagedList<PayoutListItemDto>?> GetPagedAsync(
-            PayoutFilterRequest filter);
+        Task<ApiResponse<PagedResult<PayoutListItemDto>>?> GetPayoutsAsync(
+            string token, int page = 1, int pageSize = 20,
+            string? status = null, string? search = null);
 
-        Task<PayoutDto?> GetByIdAsync(Guid id);
+        Task<ApiResponse<PayoutDto>?> GetByIdAsync(string token, Guid id);
 
-        Task<PayoutDto?> StartProcessingAsync(Guid id, string? note);
+        Task<ApiResponse<PayoutDto>?> StartProcessingAsync(
+            string token, Guid id, string? note);
 
-        Task<PayoutDto?> CompleteAsync(Guid id, ProcessPayoutDto dto);
+        Task<ApiResponse<PayoutDto>?> CompleteAsync(
+            string token, Guid id, ProcessPayoutRequest request);
 
-        Task<PayoutDto?> FailAsync(Guid id, string reason);
+        Task<ApiResponse<PayoutDto>?> FailAsync(
+            string token, Guid id, string reason);
 
-        Task<PayoutDto?> CancelAsync(Guid id, string reason);
+        Task<ApiResponse<PayoutDto>?> CancelAsync(
+            string token, Guid id, string reason);
     }
 }

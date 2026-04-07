@@ -1,82 +1,109 @@
-﻿using AdminPanel.Services.Interfaces;
+﻿using AdminPanel.Dtos.Payments;
+using AdminPanel.Services;
+using AdminPanel.Services.Interfaces;
+using AdminPanel.ViewModels.Common;
 using AdminPanel.ViewModels.Grid;
 using AdminPanel.ViewModels.Payments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Payments.Application.DTOs.Payouts;
 
 namespace AdminPanel.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "AdminOnly")]
     [Route("payments/payouts")]
     public class PayoutsController : Controller
     {
         private readonly IPayoutApiClient _client;
+        private readonly AuthTokenService _tokens;
 
-        public PayoutsController(IPayoutApiClient client)
-            => _client = client;
+        public PayoutsController(IPayoutApiClient client, AuthTokenService tokens)
+        {
+            _client = client;
+            _tokens = tokens;
+        }
 
         // GET /payments/payouts
+        [HttpGet("")]
         public async Task<IActionResult> Index(
-            string? status, string? search, int page = 1)
+            string? status, string? search, int page = 1,
+            CancellationToken ct = default)
         {
-            var filter = new PayoutFilterRequest
-            {
-                Status = status,
-                Search = search,
-                Page = page,
-                PageSize = 20
-            };
-
-            var paged = await _client.GetPagedAsync(filter);
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.GetPayoutsAsync(token, page, 20, status, search);
 
             var vm = new PayoutIndexViewModel
             {
-                Items = paged?.Items.Select(MapToListItem).ToList() ?? [],
-                Page = paged?.Page ?? 1,
-                PageSize = paged?.PageSize ?? 20,
-                TotalCount = paged?.TotalCount ?? 0,
+                Items = result?.Data?.Items.Select(p => new PayoutListItemViewModel
+                {
+                    Id = p.Id,
+                    SellerId = p.SellerId,
+                    SellerName = p.SellerName,
+                    Amount = p.Amount,
+                    CurrencyCode = p.CurrencyCode,
+                    Status = p.Status,
+                    PaymentMethod = !string.IsNullOrWhiteSpace(p.UpiId)
+                        ? $"UPI: {p.UpiId}"
+                        : p.BankAccountNumber is not null
+                            ? $"Bank: ****{p.BankAccountNumber[^Math.Min(4, p.BankAccountNumber.Length)..]}"
+                            : null,
+                    CompletedAt = p.CompletedAt,
+                    CreatedAt = p.CreatedAt
+                }).ToList() ?? [],
+                Page = result?.Data?.Page ?? page,
+                PageSize = result?.Data?.PageSize ?? 20,
+                TotalCount = result?.Data?.TotalCount ?? 0,
                 Search = search,
                 StatusFilter = status,
-                StatusOptions = BuildStatusOptions(status),
-                RouteValues = new Dictionary<string, string?>
+                StatusOptions = new[]
+                {
+                    "Pending", "Processing", "Completed", "Failed", "Cancelled"
+                }.Select(s => new FilterOption(s, s)).ToList(),
+                RouteValues = new()
                 {
                     ["status"] = status,
                     ["search"] = search
                 }
             };
 
+            vm.BuildRouteData(new() { ["status"] = status, ["search"] = search });
             return View(vm);
         }
 
         // GET /payments/payouts/{id}
         [HttpGet("{id:guid}")]
-        public async Task<IActionResult> Detail(Guid id)
+        public async Task<IActionResult> Detail(Guid id, CancellationToken ct)
         {
-            var dto = await _client.GetByIdAsync(id);
-            if (dto is null) return NotFound();
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.GetByIdAsync(token, id);
 
+            if (result?.Data is null)
+            {
+                TempData["Error"] = "Payout not found.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var p = result.Data;
             var vm = new PayoutDetailViewModel
             {
-                Id = dto.Id,
-                SellerId = dto.SellerId,
-                SellerName = dto.SellerName,
-                Amount = dto.Amount,
-                CurrencyCode = dto.CurrencyCode,
-                Status = dto.Status,
-                BankAccountNumber = dto.BankAccountNumber,
-                BankIfscCode = dto.BankIfscCode,
-                BankAccountName = dto.BankAccountName,
-                UpiId = dto.UpiId,
-                AdminNote = dto.AdminNote,
-                FailureReason = dto.FailureReason,
-                GatewayReference = dto.GatewayReference,
-                ProcessedAt = dto.ProcessedAt,
-                CompletedAt = dto.CompletedAt,
-                FailedAt = dto.FailedAt,
-                CancelledAt = dto.CancelledAt,
-                CreatedAt = dto.CreatedAt,
-                UpdatedAt = dto.UpdatedAt
+                Id = p.Id,
+                SellerId = p.SellerId,
+                SellerName = p.SellerName,
+                Amount = p.Amount,
+                CurrencyCode = p.CurrencyCode,
+                Status = p.Status,
+                BankAccountNumber = p.BankAccountNumber,
+                BankIfscCode = p.BankIfscCode,
+                BankAccountName = p.BankAccountName,
+                UpiId = p.UpiId,
+                AdminNote = p.AdminNote,
+                FailureReason = p.FailureReason,
+                GatewayReference = p.GatewayReference,
+                ProcessedAt = p.ProcessedAt,
+                CompletedAt = p.CompletedAt,
+                FailedAt = p.FailedAt,
+                CancelledAt = p.CancelledAt,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
             };
 
             return View(vm);
@@ -85,13 +112,16 @@ namespace AdminPanel.Controllers
         // POST /payments/payouts/{id}/process
         [HttpPost("{id:guid}/process")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Process(Guid id, string? adminNote)
+        public async Task<IActionResult> Process(
+            Guid id, string? adminNote, CancellationToken ct)
         {
-            var result = await _client.StartProcessingAsync(id, adminNote);
-            TempData[result is not null ? "SuccessMessage" : "ErrorMessage"] =
-                result is not null
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.StartProcessingAsync(token, id, adminNote);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
                     ? "Payout marked as processing."
-                    : "Failed to update payout status.";
+                    : result?.Error ?? "Failed to update payout status.";
 
             return RedirectToAction(nameof(Detail), new { id });
         }
@@ -100,18 +130,21 @@ namespace AdminPanel.Controllers
         [HttpPost("{id:guid}/complete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Complete(
-            Guid id, string gatewayReference, string? adminNote)
+            Guid id, string gatewayReference, string? adminNote,
+            CancellationToken ct)
         {
-            var result = await _client.CompleteAsync(id, new ProcessPayoutDto
-            {
-                GatewayReference = gatewayReference,
-                AdminNote = adminNote
-            });
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.CompleteAsync(token, id,
+                new ProcessPayoutRequest
+                {
+                    GatewayReference = gatewayReference,
+                    AdminNote = adminNote
+                });
 
-            TempData[result is not null ? "SuccessMessage" : "ErrorMessage"] =
-                result is not null
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
                     ? "Payout completed successfully."
-                    : "Failed to complete payout.";
+                    : result?.Error ?? "Failed to complete payout.";
 
             return RedirectToAction(nameof(Detail), new { id });
         }
@@ -119,13 +152,16 @@ namespace AdminPanel.Controllers
         // POST /payments/payouts/{id}/fail
         [HttpPost("{id:guid}/fail")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Fail(Guid id, string reason)
+        public async Task<IActionResult> Fail(
+            Guid id, string reason, CancellationToken ct)
         {
-            var result = await _client.FailAsync(id, reason);
-            TempData[result is not null ? "SuccessMessage" : "ErrorMessage"] =
-                result is not null
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.FailAsync(token, id, reason);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
                     ? "Payout marked as failed."
-                    : "Failed to update payout.";
+                    : result?.Error ?? "Failed to update payout.";
 
             return RedirectToAction(nameof(Detail), new { id });
         }
@@ -133,52 +169,18 @@ namespace AdminPanel.Controllers
         // POST /payments/payouts/{id}/cancel
         [HttpPost("{id:guid}/cancel")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Cancel(Guid id, string reason)
+        public async Task<IActionResult> Cancel(
+            Guid id, string reason, CancellationToken ct)
         {
-            var result = await _client.CancelAsync(id, reason);
-            TempData[result is not null ? "SuccessMessage" : "ErrorMessage"] =
-                result is not null
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.CancelAsync(token, id, reason);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
                     ? "Payout cancelled."
-                    : "Failed to cancel payout.";
+                    : result?.Error ?? "Failed to cancel payout.";
 
             return RedirectToAction(nameof(Detail), new { id });
-        }
-
-        // ── Helpers ────────────────────────────────────────────
-        private static PayoutListItemViewModel MapToListItem(
-            PayoutListItemDto dto)
-        {
-            var paymentMethod = !string.IsNullOrWhiteSpace(dto.UpiId)
-                ? $"UPI: {dto.UpiId}"
-                : dto.BankAccountNumber is not null
-                    ? $"Bank: ****{dto.BankAccountNumber[^4..]}"
-                    : null;
-
-            return new PayoutListItemViewModel
-            {
-                Id = dto.Id,
-                SellerId = dto.SellerId,
-                SellerName = dto.SellerName,
-                Amount = dto.Amount,
-                CurrencyCode = dto.CurrencyCode,
-                Status = dto.Status,
-                PaymentMethod = paymentMethod,
-                CompletedAt = dto.CompletedAt,
-                CreatedAt = dto.CreatedAt
-            };
-        }
-
-        private static List<FilterOption> BuildStatusOptions(string? current)
-        {
-            string[] statuses = [
-                "Pending", "Processing", "Completed", "Failed", "Cancelled"
-            ];
-            return statuses.Select(s => new FilterOption
-            {
-                Value = s,
-                Label = s,
-                Selected = s == current
-            }).ToList();
         }
     }
 }

@@ -1,31 +1,40 @@
-﻿using AdminPanel.Services.Interfaces;
+﻿using AdminPanel.Dtos.Payments;
+using AdminPanel.Services;
+using AdminPanel.Services.Interfaces;
 using AdminPanel.ViewModels.Payments;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Payments.Application.DTOs.CommissionRules;
 
 namespace AdminPanel.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "AdminOnly")]
     [Route("payments/commission-rules")]
     public class CommissionRulesController : Controller
     {
         private readonly ICommissionRuleApiClient _client;
+        private readonly AuthTokenService _tokens;
 
-        public CommissionRulesController(ICommissionRuleApiClient client)
-            => _client = client;
+        public CommissionRulesController(
+            ICommissionRuleApiClient client, AuthTokenService tokens)
+        {
+            _client = client;
+            _tokens = tokens;
+        }
 
         // GET /payments/commission-rules
-        public async Task<IActionResult> Index()
+        [HttpGet("")]
+        public async Task<IActionResult> Index(CancellationToken ct)
         {
-            var rules = await _client.GetAllAsync() ?? [];
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.GetAllAsync(token);
 
             var vm = new CommissionRuleIndexViewModel
             {
-                Rules = rules.Select(r => new CommissionRuleRowViewModel
+                Rules = (result?.Data ?? []).Select(r => new CommissionRuleRowViewModel
                 {
                     Id = r.Id,
                     CategoryId = r.CategoryId,
+                    CategoryName = r.CategoryName,
                     Name = r.Name,
                     RatePercent = r.RatePercent,
                     IsActive = r.IsActive,
@@ -40,22 +49,29 @@ namespace AdminPanel.Controllers
         }
 
         // POST /payments/commission-rules
-        [HttpPost]
+        [HttpPost("")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
-            CommissionRuleIndexViewModel vm)
+            CommissionRuleIndexViewModel vm, CancellationToken ct)
         {
-            var result = await _client.CreateAsync(new CreateCommissionRuleDto
+            if (string.IsNullOrWhiteSpace(vm.NewName))
             {
-                Name = vm.NewName ?? string.Empty,
+                TempData["Error"] = "Rule name is required.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.CreateAsync(token, new CreateCommissionRuleRequest
+            {
+                Name = vm.NewName,
                 CategoryId = vm.NewCategoryId,
                 RatePercent = vm.NewRatePercent
             });
 
-            TempData[result is not null ? "SuccessMessage" : "ErrorMessage"] =
-                result is not null
-                    ? $"Commission rule '{result.Name}' created."
-                    : "Failed to create commission rule.";
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
+                    ? $"Commission rule '{vm.NewName}' created."
+                    : result?.Error ?? "Failed to create commission rule.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -64,19 +80,22 @@ namespace AdminPanel.Controllers
         [HttpPost("{id:int}/edit")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(
-            int id, string name, int? categoryId, decimal ratePercent)
+            int id, string name, int? categoryId, decimal ratePercent,
+            CancellationToken ct)
         {
-            var result = await _client.UpdateAsync(id, new UpdateCommissionRuleDto
-            {
-                Name = name,
-                CategoryId = categoryId,
-                RatePercent = ratePercent
-            });
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.UpdateAsync(token, id,
+                new UpdateCommissionRuleRequest
+                {
+                    Name = name,
+                    CategoryId = categoryId,
+                    RatePercent = ratePercent
+                });
 
-            TempData[result is not null ? "SuccessMessage" : "ErrorMessage"] =
-                result is not null
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true
                     ? "Commission rule updated."
-                    : "Failed to update rule.";
+                    : result?.Error ?? "Failed to update rule.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -84,11 +103,13 @@ namespace AdminPanel.Controllers
         // POST /payments/commission-rules/{id}/activate
         [HttpPost("{id:int}/activate")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Activate(int id)
+        public async Task<IActionResult> Activate(int id, CancellationToken ct)
         {
-            var ok = await _client.ActivateAsync(id);
-            TempData[ok ? "SuccessMessage" : "ErrorMessage"] =
-                ok ? "Rule activated." : "Failed to activate rule.";
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.ActivateAsync(token, id);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true ? "Rule activated." : result?.Error ?? "Failed.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -96,11 +117,13 @@ namespace AdminPanel.Controllers
         // POST /payments/commission-rules/{id}/deactivate
         [HttpPost("{id:int}/deactivate")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Deactivate(int id)
+        public async Task<IActionResult> Deactivate(int id, CancellationToken ct)
         {
-            var ok = await _client.DeactivateAsync(id);
-            TempData[ok ? "SuccessMessage" : "ErrorMessage"] =
-                ok ? "Rule deactivated." : "Failed to deactivate rule.";
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.DeactivateAsync(token, id);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true ? "Rule deactivated." : result?.Error ?? "Failed.";
 
             return RedirectToAction(nameof(Index));
         }
@@ -108,11 +131,13 @@ namespace AdminPanel.Controllers
         // POST /payments/commission-rules/{id}/delete
         [HttpPost("{id:int}/delete")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
-            var ok = await _client.DeleteAsync(id);
-            TempData[ok ? "SuccessMessage" : "ErrorMessage"] =
-                ok ? "Rule deleted." : "Failed to delete rule.";
+            var token = _tokens.GetAccessToken() ?? "";
+            var result = await _client.DeleteAsync(token, id);
+
+            TempData[result?.Success == true ? "Success" : "Error"] =
+                result?.Success == true ? "Rule deleted." : result?.Error ?? "Failed.";
 
             return RedirectToAction(nameof(Index));
         }

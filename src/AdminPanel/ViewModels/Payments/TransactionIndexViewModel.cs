@@ -13,6 +13,8 @@ namespace AdminPanel.ViewModels.Payments
 
         public List<FilterOption> StatusOptions { get; set; } = [];
         public List<FilterOption> MethodOptions { get; set; } = [];
-    }
 
+        // Route data for pagination
+        public Dictionary<string, string?> RouteValues { get; set; } = [];
+    }
 }

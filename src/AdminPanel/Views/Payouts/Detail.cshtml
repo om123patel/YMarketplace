@@ -1,150 +1,202 @@
-﻿@using AdminPanel.ViewModels.Payments
+﻿@* src/AdminPanel/Views/Payouts/Detail.cshtml *@
+@using AdminPanel.Helpers
+@using AdminPanel.ViewModels.Payments
 @model PayoutDetailViewModel
 @{
     ViewData["Title"] = "Payout Detail";
-    Layout = "_AdminLayout";
     var badge = BadgeHelper.Payout(Model.Status);
 }
 
-<div class="d-flex align-items-center gap-3 mb-4">
-    <a href="@Url.Action("Index")" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back
-    </a>
+<div class="pg-bar">
     <div>
-        <h1 class="h4 mb-0">Payout Detail</h1>
-        <p class="text-muted mb-0 font-monospace small">@Model.Id</p>
+        <div class="pg-eyebrow">
+            <a asp-action="Index">Payouts</a>
+            <span class="pg-eyebrow-sep">›</span>
+            <span>Detail</span>
+        </div>
+        <h1 class="pg-title">Payout</h1>
+        <p class="pg-sub">
+            <span class="tbl-mono" style="font-size:13px">@Model.Id</span>
+            · <span class="badge @badge.CssClass">@badge.Label</span>
+        </p>
     </div>
-    <span class="badge @badge.CssClass ms-auto fs-6">@badge.Label</span>
+    <div class="pg-actions">
+        <a asp-action="Index" class="btn btn-outline btn-sm">← Back</a>
+    </div>
 </div>
 
-@await Html.PartialAsync("_AlertBanner")
+<partial name="_AlertBanner" />
 
-<div class="row g-4">
+<div class="detail-grid">
 
-    <!-- Main info -->
-    <div class="col-lg-8">
-        <div class="card mb-4">
-            <div class="card-header fw-semibold">Payout Information</div>
+    <div class="detail-main">
+
+        <div class="card">
+            <div class="card-head"><div class="card-title">Payout Information</div></div>
             <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label small text-muted">Seller</label>
-                        <div>
-                            <a href="/sellers/@Model.SellerId"
-                               class="fw-semibold text-decoration-none">
-                                @(Model.SellerName ?? Model.SellerId.ToString())
-                            </a>
+                <div class="field-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Seller</label>
+                        <div style="font-size:13.5px;color:var(--c-ink);
+                                    font-weight:600;padding:9px 0">
+                            @(Model.SellerName ?? Model.SellerId.ToString())
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small text-muted">Amount</label>
-                        <div class="fs-4 fw-bold">₹@Model.Amount.ToString("N2")</div>
+                    <div class="form-group">
+                        <label class="form-label">Amount</label>
+                        <div class="price" style="font-size:22px;padding:9px 0">
+                            ₹@Model.Amount.ToString("N2")
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Payment details -->
-        <div class="card mb-4">
-            <div class="card-header fw-semibold">Payment Account Details</div>
+        <div class="card">
+            <div class="card-head"><div class="card-title">Payment Account</div></div>
             <div class="card-body">
                 @if (!string.IsNullOrWhiteSpace(Model.UpiId))
                 {
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-phone text-primary fs-5"></i>
-                        <div>
-                            <div class="small text-muted">UPI ID</div>
-                            <div class="fw-semibold">@Model.UpiId</div>
-                        </div>
+                    <div class="detail-kv">
+                        <span class="detail-k">UPI ID</span>
+                        <span class="detail-v tbl-mono">@Model.UpiId</span>
                     </div>
                 }
                 else if (!string.IsNullOrWhiteSpace(Model.BankAccountNumber))
                 {
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small text-muted">Account Name</label>
-                            <div class="fw-semibold">@Model.BankAccountName</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small text-muted">Account Number</label>
-                            <div class="font-monospace">@Model.BankAccountNumber</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small text-muted">IFSC Code</label>
-                            <div class="font-monospace">@Model.BankIfscCode</div>
-                        </div>
+                    <div class="detail-kv">
+                        <span class="detail-k">Account Name</span>
+                        <span class="detail-v">@Model.BankAccountName</span>
+                    </div>
+                    <div class="detail-kv">
+                        <span class="detail-k">Account Number</span>
+                        <span class="detail-v tbl-mono">@Model.BankAccountNumber</span>
+                    </div>
+                    <div class="detail-kv">
+                        <span class="detail-k">IFSC Code</span>
+                        <span class="detail-v tbl-mono">@Model.BankIfscCode</span>
                     </div>
                 }
                 else
                 {
-                    <p class="text-muted mb-0">No payment details provided.</p>
+                    <p style="font-size:13px;color:var(--c-ink-4)">
+                        No payment details provided.
+                    </p>
                 }
             </div>
         </div>
 
-        <!-- Admin info -->
-        @if (!string.IsNullOrWhiteSpace(Model.AdminNote) ||
-                !string.IsNullOrWhiteSpace(Model.GatewayReference) ||
-                !string.IsNullOrWhiteSpace(Model.FailureReason))
+        @if (!string.IsNullOrEmpty(Model.AdminNote)
+                || !string.IsNullOrEmpty(Model.GatewayReference)
+                || !string.IsNullOrEmpty(Model.FailureReason))
         {
-            <div class="card mb-4">
-                <div class="card-header fw-semibold">Admin Notes</div>
+            <div class="card">
+                <div class="card-head"><div class="card-title">Admin Notes</div></div>
                 <div class="card-body">
-                    <div class="row g-3">
-                        @if (!string.IsNullOrWhiteSpace(Model.GatewayReference))
-                        {
-                            <div class="col-12">
-                                <label class="form-label small text-muted">
-                                    Gateway Reference
-                                </label>
-                                <div class="font-monospace">@Model.GatewayReference</div>
+                    @if (!string.IsNullOrEmpty(Model.GatewayReference))
+                    {
+                        <div class="detail-kv">
+                            <span class="detail-k">Gateway Ref</span>
+                            <span class="detail-v tbl-mono">@Model.GatewayReference</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.AdminNote))
+                    {
+                        <div style="margin-top:12px">
+                            <label class="form-label">Admin Note</label>
+                            <div style="font-size:13.5px;color:var(--c-ink-2);
+                                                margin-top:4px;line-height:1.6">
+                                @Model.AdminNote
                             </div>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(Model.AdminNote))
-                        {
-                            <div class="col-12">
-                                <label class="form-label small text-muted">Admin Note</label>
-                                <div>@Model.AdminNote</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.FailureReason))
+                    {
+                        <div style="margin-top:12px">
+                            <label class="form-label" style="color:var(--c-rose)">
+                                Failure / Cancel Reason
+                            </label>
+                            <div style="font-size:13.5px;color:var(--c-rose);
+                                                margin-top:4px;line-height:1.6">
+                                @Model.FailureReason
                             </div>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(Model.FailureReason))
-                        {
-                            <div class="col-12">
-                                <label class="form-label small text-muted">
-                                    Failure / Cancel Reason
-                                </label>
-                                <div class="text-danger">@Model.FailureReason</div>
-                            </div>
-                        }
-                    </div>
+                        </div>
+                    }
                 </div>
             </div>
         }
+
     </div>
 
-    <!-- Sidebar actions -->
-    <div class="col-lg-4">
+    <div class="detail-side">
 
-        <!-- Process action -->
+        <div class="card">
+            <div class="card-head"><div class="card-title">Timeline</div></div>
+            <div class="card-body">
+                <div class="detail-kv">
+                    <span class="detail-k">Requested</span>
+                    <span class="detail-v tbl-date">
+                        @Model.CreatedAt.ToString("dd MMM yyyy, HH:mm")
+                    </span>
+                </div>
+                @if (Model.ProcessedAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Processing</span>
+                        <span class="detail-v tbl-date">
+                            @Model.ProcessedAt.Value.ToString("dd MMM yyyy, HH:mm")
+                        </span>
+                    </div>
+                }
+                @if (Model.CompletedAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Completed</span>
+                        <span class="detail-v tbl-date" style="color:var(--c-emerald)">
+                            @Model.CompletedAt.Value.ToString("dd MMM yyyy, HH:mm")
+                        </span>
+                    </div>
+                }
+                @if (Model.FailedAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Failed</span>
+                        <span class="detail-v tbl-date" style="color:var(--c-rose)">
+                            @Model.FailedAt.Value.ToString("dd MMM yyyy, HH:mm")
+                        </span>
+                    </div>
+                }
+                @if (Model.CancelledAt.HasValue)
+                {
+                    <div class="detail-kv">
+                        <span class="detail-k">Cancelled</span>
+                        <span class="detail-v tbl-date" style="color:var(--c-ink-4)">
+                            @Model.CancelledAt.Value.ToString("dd MMM yyyy, HH:mm")
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
         @if (Model.CanProcess)
         {
-            <div class="card mb-3 border-info">
-                <div class="card-header fw-semibold bg-info-subtle text-info-emphasis">
-                    <i class="bi bi-play-circle me-1"></i> Start Processing
+            <div class="card" style="border-color:#c7d2fe">
+                <div class="card-head"
+                     style="background:var(--c-indigo-lt);border-color:#c7d2fe">
+                    <div class="card-title" style="color:var(--c-indigo)">
+                        Start Processing
+                    </div>
                 </div>
                 <div class="card-body">
                     <form asp-action="Process" asp-route-id="@Model.Id" method="post">
                         @Html.AntiForgeryToken()
-                        <div class="mb-3">
-                            <label class="form-label small fw-semibold">
-                                Admin Note (optional)
-                            </label>
-                            <textarea name="adminNote"
-                                  class="form-control form-control-sm"
-                                  rows="2"
+                        <div class="form-group" style="margin-bottom:10px">
+                            <label class="form-label">Admin Note (optional)</label>
+                            <textarea name="adminNote" class="form-textarea" rows="2"
                                   placeholder="Internal note…"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-info btn-sm w-100">
+                        <button type="submit" class="btn btn-indigo btn-sm"
+                                style="width:100%;justify-content:center">
                             Mark as Processing
                         </button>
                     </form>
@@ -152,33 +204,33 @@
             </div>
         }
 
-        <!-- Complete action -->
         @if (Model.CanComplete)
         {
-            <div class="card mb-3 border-success">
-                <div class="card-header fw-semibold bg-success-subtle text-success-emphasis">
-                    <i class="bi bi-check-circle me-1"></i> Complete Payout
+            <div class="card" style="border-color:#bbf7d0">
+                <div class="card-head"
+                     style="background:var(--c-emerald-lt);border-color:#bbf7d0">
+                    <div class="card-title" style="color:var(--c-emerald)">
+                        Complete Payout
+                    </div>
                 </div>
                 <div class="card-body">
                     <form asp-action="Complete" asp-route-id="@Model.Id" method="post">
                         @Html.AntiForgeryToken()
-                        <div class="mb-3">
-                            <label class="form-label small fw-semibold">
-                                Gateway Reference <span class="text-danger">*</span>
+                        <div class="form-group" style="margin-bottom:10px">
+                            <label class="form-label">
+                                Gateway Reference <span>*</span>
                             </label>
                             <input type="text" name="gatewayReference"
-                                   class="form-control form-control-sm"
+                                   class="form-input"
                                    placeholder="NEFT/IMPS/UPI reference…"
                                    required />
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-semibold">
-                                Admin Note (optional)
-                            </label>
-                            <input type="text" name="adminNote"
-                                   class="form-control form-control-sm" />
+                        <div class="form-group" style="margin-bottom:10px">
+                            <label class="form-label">Admin Note (optional)</label>
+                            <input type="text" name="adminNote" class="form-input" />
                         </div>
-                        <button type="submit" class="btn btn-success btn-sm w-100">
+                        <button type="submit" class="btn btn-primary btn-sm"
+                                style="width:100%;justify-content:center">
                             Mark as Completed
                         </button>
                     </form>
@@ -186,27 +238,26 @@
             </div>
         }
 
-        <!-- Fail / Cancel -->
         @if (Model.CanFail || Model.CanCancel)
         {
-            <div class="card mb-3 border-danger">
-                <div class="card-header fw-semibold bg-danger-subtle text-danger-emphasis">
-                    <i class="bi bi-x-circle me-1"></i>
-                    @(Model.CanFail ? "Mark as Failed" : "Cancel Payout")
+            <div class="card card--danger">
+                <div class="card-head card-head--danger">
+                    <div class="card-title card-title--danger">
+                        @(Model.CanFail ? "Mark as Failed" : "Cancel Payout")
+                    </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
                     @if (Model.CanFail)
                     {
-                        <form asp-action="Fail" asp-route-id="@Model.Id" method="post"
-                              class="mb-2">
+                        <form asp-action="Fail" asp-route-id="@Model.Id" method="post">
                             @Html.AntiForgeryToken()
-                            <div class="mb-2">
-                                <textarea name="reason"
-                                  class="form-control form-control-sm"
-                                  rows="2" required
-                                  placeholder="Reason for failure…"></textarea>
+                            <div class="form-group" style="margin-bottom:10px">
+                                <label class="form-label">Reason <span>*</span></label>
+                                <textarea name="reason" class="form-textarea" rows="2"
+                                  placeholder="Reason for failure…" required></textarea>
                             </div>
-                            <button type="submit" class="btn btn-danger btn-sm w-100">
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                    style="width:100%;justify-content:center">
                                 Mark Failed
                             </button>
                         </form>
@@ -215,13 +266,13 @@
                     {
                         <form asp-action="Cancel" asp-route-id="@Model.Id" method="post">
                             @Html.AntiForgeryToken()
-                            <div class="mb-2">
-                                <textarea name="reason"
-                                  class="form-control form-control-sm"
-                                  rows="2" required
-                                  placeholder="Reason for cancellation…"></textarea>
+                            <div class="form-group" style="margin-bottom:10px">
+                                <label class="form-label">Reason <span>*</span></label>
+                                <textarea name="reason" class="form-textarea" rows="2"
+                                  placeholder="Reason for cancellation…" required></textarea>
                             </div>
-                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                            <button type="submit" class="btn btn-danger btn-sm"
+                                    style="width:100%;justify-content:center">
                                 Cancel Payout
                             </button>
                         </form>
@@ -229,47 +280,6 @@
                 </div>
             </div>
         }
-
-        <!-- Meta -->
-        <div class="card">
-            <div class="card-header fw-semibold">Timeline</div>
-            <div class="card-body">
-                <dl class="row mb-0 small">
-                    <dt class="col-6 text-muted">Requested</dt>
-                    <dd class="col-6">
-                        @Model.CreatedAt.ToString("dd MMM yyyy HH:mm")
-                    </dd>
-                    @if (Model.ProcessedAt.HasValue)
-                    {
-                        <dt class="col-6 text-muted">Processing</dt>
-                        <dd class="col-6">
-                            @Model.ProcessedAt.Value.ToString("dd MMM yyyy HH:mm")
-                        </dd>
-                    }
-                    @if (Model.CompletedAt.HasValue)
-                    {
-                        <dt class="col-6 text-muted">Completed</dt>
-                        <dd class="col-6 text-success fw-semibold">
-                            @Model.CompletedAt.Value.ToString("dd MMM yyyy HH:mm")
-                        </dd>
-                    }
-                    @if (Model.FailedAt.HasValue)
-                    {
-                        <dt class="col-6 text-muted">Failed</dt>
-                        <dd class="col-6 text-danger">
-                            @Model.FailedAt.Value.ToString("dd MMM yyyy HH:mm")
-                        </dd>
-                    }
-                    @if (Model.CancelledAt.HasValue)
-                    {
-                        <dt class="col-6 text-muted">Cancelled</dt>
-                        <dd class="col-6 text-secondary">
-                            @Model.CancelledAt.Value.ToString("dd MMM yyyy HH:mm")
-                        </dd>
-                    }
-                </dl>
-            </div>
-        </div>
 
     </div>
 </div>

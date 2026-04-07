@@ -1,47 +1,50 @@
-﻿using AdminPanel.Services.Interfaces;
-using Payments.Application.DTOs.Transactions;
-using Shared.Application.Models;
+﻿using AdminPanel.Dtos.Common;
+using AdminPanel.Dtos.Payments;
+using AdminPanel.Models;
+using AdminPanel.Services.Interfaces;
 
 namespace AdminPanel.Services
 {
     public class TransactionApiClient : ApiClientBase, ITransactionApiClient
     {
-        private readonly HttpClient _http;
+        public TransactionApiClient(HttpClient http, ILogger<TransactionApiClient> logger)
+            : base(http, logger) { }
 
-        public TransactionApiClient(HttpClient http) => _http = http;
-
-        public async Task<PagedList<TransactionListItemDto>?> GetPagedAsync(
-            TransactionFilterRequest filter)
+        public Task<ApiResponse<PagedResult<TransactionListItemDto>>?> GetTransactionsAsync(
+            string token, int page = 1, int pageSize = 20,
+            string? status = null, string? method = null,
+            string? dateFrom = null, string? dateTo = null,
+            string? search = null,
+            string sortBy = "createdAt", string sortDirection = "desc")
         {
             var q = BuildQuery(new()
             {
                 ["page"] = page.ToString(),
                 ["pageSize"] = pageSize.ToString(),
-                ["search"] = search,
                 ["status"] = status,
+                ["method"] = method,
+                ["dateFrom"] = dateFrom,
+                ["dateTo"] = dateTo,
+                ["search"] = search,
                 ["sortBy"] = sortBy,
                 ["sortDirection"] = sortDirection
             });
-            return await _http.GetFromJsonAsync<PagedList<TransactionListItemDto>>(
-                $"api/admin/transactions?{qs}");
+            return GetAsync<ApiResponse<PagedResult<TransactionListItemDto>>>(
+                $"api/admin/transactions{q}", token);
         }
 
-        public async Task<TransactionDto?> GetByIdAsync(Guid id)
-            => await _http.GetFromJsonAsync<TransactionDto>(
-                $"api/admin/transactions/{id}");
+        public Task<ApiResponse<TransactionDto>?> GetByIdAsync(string token, Guid id)
+            => GetAsync<ApiResponse<TransactionDto>>(
+                $"api/admin/transactions/{id}", token);
 
-        public async Task<TransactionDto?> GetByOrderIdAsync(Guid orderId)
-            => await _http.GetFromJsonAsync<TransactionDto>(
-                $"api/admin/transactions/by-order/{orderId}");
+        public Task<ApiResponse<TransactionDto>?> GetByOrderIdAsync(
+            string token, Guid orderId)
+            => GetAsync<ApiResponse<TransactionDto>>(
+                $"api/admin/transactions/by-order/{orderId}", token);
 
-        public async Task<TransactionDto?> RefundAsync(
-            Guid id, RefundTransactionDto dto)
-        {
-            var response = await _http.PostAsJsonAsync(
-                $"api/admin/transactions/{id}/refund", dto);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<TransactionDto>()
-                : null;
-        }
+        public Task<ApiResponse<TransactionDto>?> RefundAsync(
+            string token, Guid id, RefundTransactionRequest request)
+            => PostAsync<ApiResponse<TransactionDto>>(
+                $"api/admin/transactions/{id}/refund", request, token);
     }
 }

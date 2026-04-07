@@ -1,62 +1,52 @@
-﻿using AdminPanel.Services.Interfaces;
-using Payments.Application.DTOs.Payouts;
-using Shared.Application.Models;
+﻿using AdminPanel.Dtos.Common;
+using AdminPanel.Dtos.Payments;
+using AdminPanel.Models;
+using AdminPanel.Services.Interfaces;
 
 namespace AdminPanel.Services
 {
-    public class PayoutApiClient : IPayoutApiClient
+    public class PayoutApiClient : ApiClientBase, IPayoutApiClient
     {
-        private readonly HttpClient _http;
+        public PayoutApiClient(HttpClient http, ILogger<PayoutApiClient> logger)
+            : base(http, logger) { }
 
-        public PayoutApiClient(HttpClient http) => _http = http;
-
-        public async Task<PagedList<PayoutListItemDto>?> GetPagedAsync(
-            PayoutFilterRequest filter)
+        public Task<ApiResponse<PagedResult<PayoutListItemDto>>?> GetPayoutsAsync(
+            string token, int page = 1, int pageSize = 20,
+            string? status = null, string? search = null)
         {
-            var qs = QueryStringHelper.Build(filter);
-            return await _http.GetFromJsonAsync<PagedList<PayoutListItemDto>>(
-                $"api/admin/payouts?{qs}");
+            var q = BuildQuery(new()
+            {
+                ["page"] = page.ToString(),
+                ["pageSize"] = pageSize.ToString(),
+                ["status"] = status,
+                ["search"] = search
+            });
+            return GetAsync<ApiResponse<PagedResult<PayoutListItemDto>>>(
+                $"api/admin/payouts{q}", token);
         }
 
-        public async Task<PayoutDto?> GetByIdAsync(Guid id)
-            => await _http.GetFromJsonAsync<PayoutDto>(
-                $"api/admin/payouts/{id}");
+        public Task<ApiResponse<PayoutDto>?> GetByIdAsync(string token, Guid id)
+            => GetAsync<ApiResponse<PayoutDto>>(
+                $"api/admin/payouts/{id}", token);
 
-        public async Task<PayoutDto?> StartProcessingAsync(Guid id, string? note)
-        {
-            var response = await _http.PostAsJsonAsync(
-                $"api/admin/payouts/{id}/process", note);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<PayoutDto>()
-                : null;
-        }
+        public Task<ApiResponse<PayoutDto>?> StartProcessingAsync(
+            string token, Guid id, string? note)
+            => PostAsync<ApiResponse<PayoutDto>>(
+                $"api/admin/payouts/{id}/process", new { note }, token);
 
-        public async Task<PayoutDto?> CompleteAsync(Guid id, ProcessPayoutDto dto)
-        {
-            var response = await _http.PostAsJsonAsync(
-                $"api/admin/payouts/{id}/complete", dto);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<PayoutDto>()
-                : null;
-        }
+        public Task<ApiResponse<PayoutDto>?> CompleteAsync(
+            string token, Guid id, ProcessPayoutRequest request)
+            => PostAsync<ApiResponse<PayoutDto>>(
+                $"api/admin/payouts/{id}/complete", request, token);
 
-        public async Task<PayoutDto?> FailAsync(Guid id, string reason)
-        {
-            var response = await _http.PostAsJsonAsync(
-                $"api/admin/payouts/{id}/fail", reason);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<PayoutDto>()
-                : null;
-        }
+        public Task<ApiResponse<PayoutDto>?> FailAsync(
+            string token, Guid id, string reason)
+            => PostAsync<ApiResponse<PayoutDto>>(
+                $"api/admin/payouts/{id}/fail", new { reason }, token);
 
-        public async Task<PayoutDto?> CancelAsync(Guid id, string reason)
-        {
-            var response = await _http.PostAsJsonAsync(
-                $"api/admin/payouts/{id}/cancel", reason);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<PayoutDto>()
-                : null;
-        }
+        public Task<ApiResponse<PayoutDto>?> CancelAsync(
+            string token, Guid id, string reason)
+            => PostAsync<ApiResponse<PayoutDto>>(
+                $"api/admin/payouts/{id}/cancel", new { reason }, token);
     }
-
 }

@@ -1,22 +1,24 @@
-﻿using Payments.Application.DTOs.CommissionRules;
+﻿using AdminPanel.Dtos.Payments;
+using AdminPanel.Models;
 
 namespace AdminPanel.Services.Interfaces
 {
     public interface ICommissionRuleApiClient
     {
-        Task<IEnumerable<CommissionRuleDto>?> GetAllAsync();
+        Task<ApiResponse<List<CommissionRuleDto>>?> GetAllAsync(string token);
 
-        Task<CommissionRuleDto?> GetByIdAsync(int id);
+        Task<ApiResponse<CommissionRuleDto>?> GetByIdAsync(string token, int id);
 
-        Task<CommissionRuleDto?> CreateAsync(CreateCommissionRuleDto dto);
+        Task<ApiResponse<CommissionRuleDto>?> CreateAsync(
+            string token, CreateCommissionRuleRequest request);
 
-        Task<CommissionRuleDto?> UpdateAsync(int id, UpdateCommissionRuleDto dto);
+        Task<ApiResponse<CommissionRuleDto>?> UpdateAsync(
+            string token, int id, UpdateCommissionRuleRequest request);
 
-        Task<bool> ActivateAsync(int id);
+        Task<ApiResponse?> ActivateAsync(string token, int id);
 
-        Task<bool> DeactivateAsync(int id);
+        Task<ApiResponse?> DeactivateAsync(string token, int id);
 
-        Task<bool> DeleteAsync(int id);
+        Task<ApiResponse?> DeleteAsync(string token, int id);
     }
-
 }

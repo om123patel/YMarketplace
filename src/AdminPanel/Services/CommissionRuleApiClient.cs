@@ -1,56 +1,44 @@
-﻿using AdminPanel.Services.Interfaces;
-using Payments.Application.DTOs.CommissionRules;
+﻿using AdminPanel.Dtos.Payments;
+using AdminPanel.Models;
+using AdminPanel.Services.Interfaces;
 
 namespace AdminPanel.Services
 {
-    public class CommissionRuleApiClient : ICommissionRuleApiClient
+    public class CommissionRuleApiClient : ApiClientBase, ICommissionRuleApiClient
     {
-        private readonly HttpClient _http;
+        public CommissionRuleApiClient(
+            HttpClient http, ILogger<CommissionRuleApiClient> logger)
+            : base(http, logger) { }
 
-        public CommissionRuleApiClient(HttpClient http) => _http = http;
+        public Task<ApiResponse<List<CommissionRuleDto>>?> GetAllAsync(string token)
+            => GetAsync<ApiResponse<List<CommissionRuleDto>>>(
+                "api/admin/commission-rules", token);
 
-        public async Task<IEnumerable<CommissionRuleDto>?> GetAllAsync()
-            => await _http.GetFromJsonAsync<IEnumerable<CommissionRuleDto>>(
-                "api/admin/commission-rules");
+        public Task<ApiResponse<CommissionRuleDto>?> GetByIdAsync(
+            string token, int id)
+            => GetAsync<ApiResponse<CommissionRuleDto>>(
+                $"api/admin/commission-rules/{id}", token);
 
-        public async Task<CommissionRuleDto?> GetByIdAsync(int id)
-            => await _http.GetFromJsonAsync<CommissionRuleDto>(
-                $"api/admin/commission-rules/{id}");
+        public Task<ApiResponse<CommissionRuleDto>?> CreateAsync(
+            string token, CreateCommissionRuleRequest request)
+            => PostAsync<ApiResponse<CommissionRuleDto>>(
+                "api/admin/commission-rules", request, token);
 
-        public async Task<CommissionRuleDto?> CreateAsync(
-            CreateCommissionRuleDto dto)
-        {
-            var response = await _http.PostAsJsonAsync(
-                "api/admin/commission-rules", dto);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<CommissionRuleDto>()
-                : null;
-        }
+        public Task<ApiResponse<CommissionRuleDto>?> UpdateAsync(
+            string token, int id, UpdateCommissionRuleRequest request)
+            => PutAsync<ApiResponse<CommissionRuleDto>>(
+                $"api/admin/commission-rules/{id}", request, token);
 
-        public async Task<CommissionRuleDto?> UpdateAsync(
-            int id, UpdateCommissionRuleDto dto)
-        {
-            var response = await _http.PutAsJsonAsync(
-                $"api/admin/commission-rules/{id}", dto);
-            return response.IsSuccessStatusCode
-                ? await response.Content.ReadFromJsonAsync<CommissionRuleDto>()
-                : null;
-        }
+        public Task<ApiResponse?> ActivateAsync(string token, int id)
+            => PostAsync<ApiResponse>(
+                $"api/admin/commission-rules/{id}/activate", null, token);
 
-        public async Task<bool> ActivateAsync(int id)
-            => (await _http.PostAsJsonAsync(
-                $"api/admin/commission-rules/{id}/activate", (object?)null))
-               .IsSuccessStatusCode;
+        public Task<ApiResponse?> DeactivateAsync(string token, int id)
+            => PostAsync<ApiResponse>(
+                $"api/admin/commission-rules/{id}/deactivate", null, token);
 
-        public async Task<bool> DeactivateAsync(int id)
-            => (await _http.PostAsJsonAsync(
-                $"api/admin/commission-rules/{id}/deactivate", (object?)null))
-               .IsSuccessStatusCode;
-
-        public async Task<bool> DeleteAsync(int id)
-            => (await _http.DeleteAsync(
-                $"api/admin/commission-rules/{id}"))
-               .IsSuccessStatusCode;
+        public Task<ApiResponse?> DeleteAsync(string token, int id)
+            => DeleteAsync<ApiResponse>(
+                $"api/admin/commission-rules/{id}", token);
     }
-
 }

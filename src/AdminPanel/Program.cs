@@ -100,10 +100,10 @@ namespace AdminPanel
             services.AddHttpClient<ITransactionApiClient, TransactionApiClient>(ConfigureClient);
             services.AddHttpClient<IPayoutApiClient, PayoutApiClient>(ConfigureClient);
             services.AddHttpClient<ICommissionRuleApiClient, CommissionRuleApiClient>(ConfigureClient);
-                        // ──────────────────────────────────────────────────────────
-                        // BUILD APP
-                        // ──────────────────────────────────────────────────────────
-                        var app = builder.Build();
+            // ──────────────────────────────────────────────────────────
+            // BUILD APP
+            // ──────────────────────────────────────────────────────────
+            var app = builder.Build();
 
             if (!app.Environment.IsDevelopment())
             {
