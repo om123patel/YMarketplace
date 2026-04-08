@@ -1,5 +1,8 @@
 ﻿using AdminPanel.Services;
 using AdminPanel.Services.Interfaces;
+using AdminPanel.Validators.Inventory;
+using AdminPanel.ViewModels.Inventory;
+using FluentValidation;
 using Serilog;
 
 namespace AdminPanel
@@ -100,6 +103,18 @@ namespace AdminPanel
             services.AddHttpClient<ITransactionApiClient, TransactionApiClient>(ConfigureClient);
             services.AddHttpClient<IPayoutApiClient, PayoutApiClient>(ConfigureClient);
             services.AddHttpClient<ICommissionRuleApiClient, CommissionRuleApiClient>(ConfigureClient);
+            services.AddHttpClient<IInventoryApiClient, InventoryApiClient>(ConfigureClient);
+
+
+            // Inventory ViewModel validators
+            services.AddScoped<IValidator<AdjustStockViewModel>,
+                               AdjustStockViewModelValidator>();
+            services.AddScoped<IValidator<SetQuantityViewModel>,
+                               SetQuantityViewModelValidator>();
+            services.AddScoped<IValidator<UpdateStockSettingsViewModel>,
+                               UpdateStockSettingsViewModelValidator>();
+            services.AddScoped<IValidator<CreateStockViewModel>,
+                               CreateStockViewModelValidator>();
             // ──────────────────────────────────────────────────────────
             // BUILD APP
             // ──────────────────────────────────────────────────────────

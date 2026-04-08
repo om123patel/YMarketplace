@@ -1,0 +1,259 @@
+﻿@using AdminPanel.ViewModels.Inventory
+@using AdminPanel.Helpers
+@model StockListViewModel
+@{
+    ViewData["Title"] = "Inventory";
+
+    TableColumnModel Col(string label, string column, string? width = null) => new()
+    {
+        Label = label,
+        Sortable = true,
+        Column = column,
+        SortBy = Model.SortBy,
+        SortDirection = Model.SortDirection,
+        Request = Context.Request,
+        Width = width
+    };
+    TableColumnModel Plain(string label, string? width = null, string align = "left") => new()
+    {
+        Label = label,
+        Sortable = false,
+        Width = width,
+        Align = align
+    };
+}
+
+<div class="pg-bar">
+    <div>
+        <h1 class="pg-title">Inventory</h1>
+        <p class="pg-sub">
+            @Model.TotalCount.ToString("N0") stock records
+            @if (Model.LowStockCount > 0)
+            {
+                <span class="badge b-pending" style="margin-left:8px">
+                    @Model.LowStockCount low stock
+                </span>
+            }
+        </p>
+    </div>
+</div>
+
+<partial name="_AlertBanner" />
+
+@if (Model.LowStockCount > 0 && Model.LowStockOnly != true)
+{
+    <div class="alert alert-amber">
+        <div class="alert-icon">⚠</div>
+        <div class="alert-body">
+            <div class="alert-title">
+                @Model.LowStockCount product@(Model.LowStockCount == 1 ? "" : "s") running low on stock
+            </div>
+            <div class="alert-desc">
+                Review and restock before products go out of stock.
+            </div>
+        </div>
+        <a asp-action="Index" asp-route-lowStockOnly="true"
+           class="btn btn-outline btn-sm">View Low Stock</a>
+    </div>
+}
+
+<div class="card">
+
+    <form method="get" class="filter-bar">
+        <input type="hidden" name="sortBy" value="@Model.SortBy" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+
+        <div class="filter-search">
+            <svg class="filter-search-ico" width="14" height="14" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input name="search" value="@Model.Search"
+                   placeholder="Search product…" class="filter-input" />
+        </div>
+
+        <select name="status" class="filter-select">
+            <option value="">All Statuses</option>
+            @foreach (var s in new[] { "InStock", "LowStock", "OutOfStock" })
+            {
+                <option value="@s" selected="@(Model.Status == s)">
+                    @(s == "InStock" ? "In Stock" : s == "LowStock" ? "Low Stock" : "Out of Stock")
+                </option>
+            }
+        </select>
+
+        <div class="tab-group">
+            <a href="@Url.Action("Index", new { search = Model.Search, sortBy = Model.SortBy, sortDirection = Model.SortDirection })"
+               class="tab @(Model.LowStockOnly != true ? "on" : "")">
+                All
+            </a>
+            <a href="@Url.Action("Index", new { search = Model.Search, lowStockOnly = "true", sortBy = Model.SortBy, sortDirection = Model.SortDirection })"
+               class="tab @(Model.LowStockOnly == true ? "on" : "")">
+                Low Stock
+                @if (Model.LowStockCount > 0)
+                {
+                    <span class="tab-count">@Model.LowStockCount</span>
+                }
+            </a>
+        </div>
+
+        <div class="f-right">
+            <button type="submit" class="btn btn-outline btn-sm">Filter</button>
+            @if (!string.IsNullOrEmpty(Model.Search) || !string.IsNullOrEmpty(Model.Status))
+            {
+                <a asp-action="Index" class="btn btn-ghost btn-sm">Clear</a>
+            }
+        </div>
+    </form>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">
+                <svg width="32" height="32" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <div class="empty-title">No inventory records found</div>
+            <div class="empty-desc">
+                Stock records are created automatically when products are added.
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="tbl-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <partial name="_TableColumn" model="@Plain("Product")" />
+                        <partial name="_TableColumn" model="@Col("Available", "quantity", "110px")" />
+                        <partial name="_TableColumn" model="@Plain("Reserved", "100px", "center")" />
+                        <partial name="_TableColumn" model="@Plain("Total", "100px", "center")" />
+                        <partial name="_TableColumn" model="@Plain("Threshold", "100px", "center")" />
+                        <partial name="_TableColumn" model="@Plain("Status", "130px")" />
+                        <partial name="_TableColumn" model="@Col("Updated", "updatedat", "120px")" />
+                        <partial name="_TableColumn" model="@Plain("Actions", "80px", "center")" />
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div class="prod-cell">
+                                    <div class="prod-img">
+                                        @if (!string.IsNullOrEmpty(s.ProductImageUrl))
+                                        {
+                                            <img src="@s.ProductImageUrl"
+                                                 alt="@s.ProductName" />
+                                        }
+                                        else
+                                        {
+                                            <svg width="16" height="16" fill="none"
+                                                 viewBox="0 0 24 24"
+                                                 stroke="var(--c-ink-4)" stroke-width="1.5">
+                                                <path stroke-linecap="round"
+                                                      stroke-linejoin="round"
+                                                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                            </svg>
+                                        }
+                                </div>
+                                <div>
+                                    <div class="prod-name">
+                                        @(string.IsNullOrEmpty(s.ProductName)
+                                                                            ? s.ProductId.ToString()[..8] + "…"
+                                                                            : s.ProductName)
+                                </div>
+                                @if (!string.IsNullOrEmpty(s.VariantName))
+                                        {
+                                            <div class="prod-sku">@s.VariantName</div>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td style="text-align:center">
+                                @{
+                                    var availStyle = s.AvailableQuantity == 0
+                                    ? "color:var(--c-rose);font-weight:700"
+                                    : s.IsLowStock
+                                    ? "color:var(--c-amber);font-weight:700"
+                                    : "font-weight:600";
+                                }
+                                <span style="font-size:15px;font-family:var(--f-display);@availStyle">
+                                    @s.AvailableQuantity
+                                </span>
+                            </td>
+
+                            <td style="text-align:center">
+                                <span class="tbl-mono" style="color:var(--c-ink-3)">
+                                    @s.ReservedQuantity
+                                </span>
+                            </td>
+
+                            <td style="text-align:center">
+                                <span class="tbl-mono">@s.Quantity</span>
+                            </td>
+
+                            <td style="text-align:center">
+                                <span class="tbl-mono" style="color:var(--c-ink-4)">
+                                    @s.LowStockThreshold
+                                </span>
+                            </td>
+
+                            <td>
+                                @{
+                                    var stockBadge = s.Status switch
+                                    {
+                                        "InStock" => "badge b-active",
+                                        "LowStock" => "badge b-pending",
+                                        "OutOfStock" => "badge b-rejected",
+                                        _ => "badge badge-gray"
+                                    };
+                                    var stockLabel = s.Status switch
+                                    {
+                                        "InStock" => "In Stock",
+                                        "LowStock" => "Low Stock",
+                                        "OutOfStock" => "Out of Stock",
+                                        _ => s.Status
+                                    };
+                                }
+                                <span class="@stockBadge">@stockLabel</span>
+                            </td>
+
+                            <td class="tbl-date">@s.UpdatedAt.ToString("dd MMM yyyy")</td>
+
+                            <td style="text-align:center">
+                                <a asp-action="Detail"
+                                   asp-route-productId="@s.ProductId"
+                                   class="row-btn" title="Manage Stock">
+                                    <svg width="14" height="14" fill="none"
+                                         viewBox="0 0 24 24" stroke="currentColor"
+                                         stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pagination" model="@(new PaginationViewModel
+                                    {
+                                        Page = Model.Page,
+                                        PageSize = Model.PageSize,
+                                        TotalCount = Model.TotalCount,
+                                        RouteData = Model.RouteData,
+                                        Action = "Index",
+                                        Controller = "Inventory"
+                                    })" />
+        }
+
+</div>

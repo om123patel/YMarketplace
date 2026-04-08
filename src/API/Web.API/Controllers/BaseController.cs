@@ -40,7 +40,10 @@ namespace Web.API.Controllers
                 "INVALID_PAYOUT_STATUS_TRANSITION" or
                 "INVALID_STATUS_TRANSITION" or
                 "INVALID_PAYOUT_AMOUNT" or
-                "INVALID_REFUND_AMOUNT" 
+                "INVALID_REFUND_AMOUNT" or
+                "STOCK_NOT_FOUND" or
+                "STOCK_EXISTS" or
+                "INSUFFICIENT_STOCK" 
                     => NotFound(ApiResponse<T>.Fail(
                         result.Error!, result.ErrorCode, 404)),
 
