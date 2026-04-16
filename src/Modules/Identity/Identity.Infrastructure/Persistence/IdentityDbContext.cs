@@ -13,6 +13,10 @@ namespace Identity.Infrastructure.Persistence
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         public DbSet<Seller> Sellers => Set<Seller>();
 
+        public DbSet<CustomerAddress> CustomerAddresses => Set<CustomerAddress>();
+        public DbSet<CustomerWallet> CustomerWallets => Set<CustomerWallet>();
+        public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
            // modelBuilder.Ignore("UserId1"); // force detection

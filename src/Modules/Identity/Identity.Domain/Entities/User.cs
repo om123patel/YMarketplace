@@ -27,6 +27,9 @@ namespace Identity.Domain.Entities
 
         public ICollection<Seller> Sellers { get; set; } = new List<Seller>();
 
+        // Added collection for refresh tokens so EF knows the relationship
+        public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
         private User() { } // EF Core
 
         // ── Factory ────────────────────────────────────────────

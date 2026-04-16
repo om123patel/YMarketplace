@@ -38,6 +38,20 @@ namespace Payments.Domain.Entities
 
         private Transaction() { }   // EF Core
 
+
+        // Add to Transaction.cs — inside the class body after existing properties
+
+        public string? GatewayOrderId { get; private set; }  // gateway-side order/payment ID
+        public string? GatewayCheckoutUrl { get; private set; }  // redirect URL for hosted pages
+
+        // Call after Create() to record the gateway-assigned order ID and checkout URL
+        public void SetGatewayOrderId(string gatewayOrderId, string? checkoutUrl, Guid updatedBy)
+        {
+            GatewayOrderId = gatewayOrderId;
+            GatewayCheckoutUrl = checkoutUrl;
+            SetUpdatedBy(updatedBy);
+        }
+
         // ── Factory ──────────────────────────────────────────────
         public static Transaction Create(
             Guid orderId,

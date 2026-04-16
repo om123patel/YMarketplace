@@ -13,6 +13,9 @@ namespace Identity.Domain.Entities
         public string? ReplacedByToken { get; private set; }
         public string? CreatedByIp { get; private set; }
 
+        // Navigation property to allow EF to understand the relationship
+        public User? User { get; private set; }
+
         private RefreshToken() { } // EF Core
 
         public static RefreshToken Create(
@@ -33,6 +36,13 @@ namespace Identity.Domain.Entities
                 UpdatedAt = DateTime.UtcNow,
                 CreatedBy = createdBy
             };
+        }
+
+        // Attach tracked User entity so EF knows the principal/dependent ordering
+        public void AttachUser(User user)
+        {
+            User = user;
+            UserId = user.Id;
         }
 
         public bool IsExpired() => DateTime.UtcNow >= ExpiresAt;

@@ -49,6 +49,8 @@ public static class IdentityModule
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ISellerRepository, SellerRepository>();
+        services.AddScoped<ICustomerAddressRepository, CustomerAddressRepository>();
+        services.AddScoped<IWalletRepository, WalletRepository>();
 
         // ── 5. Infrastructure Services ─────────────────────────
         services.AddScoped<ITokenService, TokenService>();

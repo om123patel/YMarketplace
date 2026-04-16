@@ -25,10 +25,25 @@ namespace Web.API.Controllers.Customer
         // GET api/buyer/orders
         [HttpGet]
         public async Task<IActionResult> GetMyOrders(
-            int page = 1, int pageSize = 20, CancellationToken ct = default)
+     int page = 1, int pageSize = 20,
+     string? status = null,
+     DateTime? from = null,
+     DateTime? to = null,
+     string? search = null,
+     CancellationToken ct = default)
         {
             var buyerId = User.GetUserId();
-            var result = await _orderService.GetBuyerOrdersAsync(buyerId, page, pageSize, ct);
+            var filter = new OrderFilterRequest
+            {
+                Page = page,
+                PageSize = pageSize,
+                BuyerId = buyerId,
+                Status = status,
+                CreatedFrom = from,
+                CreatedTo = to,
+                Search = search
+            };
+            var result = await _orderService.GetPagedAsync(filter, ct);
             return HandleResult(result);
         }
 

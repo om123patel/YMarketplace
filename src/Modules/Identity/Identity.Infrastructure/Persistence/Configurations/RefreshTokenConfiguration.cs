@@ -24,6 +24,13 @@ namespace Identity.Infrastructure.Persistence.Configurations
             b.HasIndex(t => t.UserId)
                 .HasDatabaseName("IX_RefreshTokens_UserId");
 
+            // Configure relationship so EF knows principal/dependent ordering
+            b.HasOne(t => t.User)
+             .WithMany(u => u.RefreshTokens)
+             .HasForeignKey(t => t.UserId)
+             .IsRequired()
+             .OnDelete(DeleteBehavior.Cascade);
+
             // No soft delete filter — tokens are revoked not deleted
         }
     }

@@ -21,6 +21,9 @@ namespace Catalog.Infrastructure.Persistence
         public DbSet<AttributeTemplateItem> AttributeTemplateItems => Set<AttributeTemplateItem>();
         public DbSet<ProductStatusHistory> ProductStatusHistories => Set<ProductStatusHistory>();
 
+        public DbSet<Wishlist> Wishlists => Set<Wishlist>();
+        public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // Set default schema

@@ -19,7 +19,8 @@ namespace Catalog.Application
             services.AddScoped<IAttributeTemplateService, AttributeTemplateService>();
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<ISellerProductService, SellerProductService>();
-
+            services.AddScoped<IWishlistService, WishlistService>();
+            services.AddScoped<ICustomerProductQueryService, CustomerProductQueryService>();
             // ── AutoMapper ──
             // Scans Catalog.Application assembly for all Profile classes
             services.AddAutoMapper(cfg => { }, typeof(CatalogMappingProfile).Assembly);

@@ -1,5 +1,7 @@
 ﻿using Catalog.Application;
 using Catalog.Application.Interfaces;
+using Catalog.Application.Services;
+using Catalog.Application.Services.Interface;
 using Catalog.Infrastructure.Persistence;
 using Catalog.Infrastructure.Persistence.Repositories;
 using Catalog.Infrastructure.Persistence.UnitOfWork;
@@ -41,6 +43,9 @@ namespace Catalog.Infrastructure
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IProductStatusHistoryRepository,
                 ProductStatusHistoryRepository>();
+
+            services.AddScoped<IWishlistRepository, WishlistRepository>();
+            
 
             return services;
         }

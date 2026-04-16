@@ -15,6 +15,7 @@ namespace Payments.Application
             services.AddScoped<ITransactionService, TransactionService>();
             services.AddScoped<IPayoutService, PayoutService>();
             services.AddScoped<ICommissionRuleService, CommissionRuleService>();
+            services.AddScoped<ICheckoutService, CheckoutService>();
 
             services.AddAutoMapper(
                 cfg => { }, typeof(PaymentsMappingProfile).Assembly);

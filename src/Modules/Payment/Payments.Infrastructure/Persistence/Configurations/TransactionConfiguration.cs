@@ -56,6 +56,13 @@ namespace Payments.Infrastructure.Persistence.Configurations
             b.Property(x => x.CreatedBy)
              .HasDefaultValue(Guid.Empty);
 
+            b.Property(x => x.GatewayOrderId).HasMaxLength(100);
+            b.Property(x => x.GatewayCheckoutUrl).HasMaxLength(500);
+
+            b.HasIndex(x => x.GatewayOrderId)
+             .HasFilter("[GatewayOrderId] IS NOT NULL");
+
+
             b.Property(x => x.RowVersion).IsRowVersion();
 
             b.HasIndex(x => x.OrderId)

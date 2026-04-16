@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Identity.Application.DTOs.Address;
 using Identity.Application.DTOs.Seller;
 using Identity.Application.DTOs.User;
 using Identity.Domain.Entities;
@@ -20,6 +21,8 @@ namespace Identity.Application.Mappings
             // Seller -> SellerDto
             CreateMap<Seller, SellerDto>()
                 .ForMember(d => d.SellerStatus, o => o.MapFrom(s => s.Status.ToString()));
+
+            CreateMap<CustomerAddress, CustomerAddressDto>();
         }
     }
 }
